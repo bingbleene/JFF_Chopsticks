@@ -1,0 +1,64 @@
+import mongoose from "mongoose";
+
+const invoiceSchema = new mongoose.Schema(
+{
+  invoiceIndex: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  dateBought: {
+    type: Date,
+    default: Date.now
+  },
+  items: [
+    {
+      saleItemId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "saleProduct"
+      },
+
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1
+      }
+    }
+  ],
+  staff: {
+    type: String,
+    required: true
+  },
+
+  customer: {
+    type: String,
+    default: "Khách lẻ"
+  },
+
+  paymentMethod: {
+    type: String,
+    enum: ["momo", "ngân hàng", "tiền mặt"],
+    default: "tiền mặt"
+  },
+  vouchers: [
+    {
+      voucherId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Voucher"
+      },
+      quantity: {
+        type: Number,
+        min: 1
+      }
+    }
+  ],
+  note: {
+    type: String,
+    default: ""
+  }
+},
+{ timestamps: true }
+);
+
+export default mongoose.model("Invoice", invoiceSchema);
