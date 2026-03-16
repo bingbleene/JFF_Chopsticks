@@ -6,9 +6,9 @@ const Header = () => {
       <h1 className="text-4xl font-bold text-transparent bg-gradient-primary bg-clip-text">
         Chopsticks
       </h1>
-      <p className="text-muted-foreground">
+      {/* <p className="text-muted-foreground">
         Hệ thống quản lý nhập hàng & tạo hóa đơn
-      </p>
+      </p> */}
     </div>
   )
 }

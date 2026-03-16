@@ -5,7 +5,10 @@ import Voucher from '../models/Voucher.js'
 
 export const getAllInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find().sort({ dateBought: -1})
+        const invoices = await Invoice.find()
+            .populate('items.saleItemId', 'name price saleType')
+            .populate('vouchers.voucherId', 'name price')
+            .sort({ dateBought: -1})
         res.status(200).json(invoices)
     } catch (error) {
         console.error("Lỗi khi gọi getAllInvoices:", error);
@@ -16,6 +19,8 @@ export const getAllInvoices = async (req, res) => {
 export const getInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id)
+        .populate('items.saleItemId', 'name price saleType')
+        .populate('vouchers.voucherId', 'name price')
     if (!invoice) {
       return res.status(404).json({ message: 'Hóa đơn không tồn tại' })
     }

@@ -16,7 +16,7 @@ const invoiceSchema = new mongoose.Schema(
       saleItemId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: "saleProduct"
+        ref: "SaleProduct"
       },
 
       quantity: {

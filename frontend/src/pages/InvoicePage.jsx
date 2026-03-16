@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Receipt, History, Trash2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Receipt, History, Trash2, Eye, X } from 'lucide-react'
 import api from '@/lib/axios'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/hooks'
@@ -18,6 +19,13 @@ const InvoicePage = () => {
   const [activeTab, setActiveTab] = useState('create')
   const [invoices, setInvoices] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedInvoice, setSelectedInvoice] = useState(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  const handleViewDetail = (invoice) => {
+    setSelectedInvoice(invoice)
+    setIsDetailOpen(true)
+  }
 
   const fetchInvoices = async () => {
     try {
@@ -99,7 +107,7 @@ const InvoicePage = () => {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            {/* <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="create" className="gap-2">
                 <Receipt size={18} />
                 Tao hoa don
@@ -108,7 +116,7 @@ const InvoicePage = () => {
                 <History size={18} />
                 Lich su hoa don
               </TabsTrigger>
-            </TabsList> */}
+            </TabsList>
 
             {/* Create Invoice Tab */}
             <TabsContent value="create">
@@ -164,14 +172,21 @@ const InvoicePage = () => {
                               <TableCell className="text-right">
                                 {invoice.items?.length || 0}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right space-x-2">
                                 <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleViewDetail(invoice)}
+                                >
+                                  <Eye size={16} />
+                                </Button>
+{/* <Button
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => handleDeleteInvoice(invoice)}
                                 >
                                   <Trash2 size={16} />
-                                </Button>
+                                </Button> */}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -191,6 +206,166 @@ const InvoicePage = () => {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Invoice Detail Dialog */}
+          <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle>Chi tiet hoa don {selectedInvoice?.invoiceIndex}</DialogTitle>
+                    <DialogDescription>
+                      {selectedInvoice && formatDate(selectedInvoice.dateBought || selectedInvoice.createdAt)}
+                    </DialogDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsDetailOpen(false)}
+                    className="h-8 w-8"
+                  >
+                    <X size={18} />
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              {selectedInvoice && (
+                <div className="space-y-4">
+                  {/* Invoice Info */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Nhan vien:</span>
+                      <span className="ml-2 font-medium">{selectedInvoice.staff}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Khach hang:</span>
+                      <span className="ml-2 font-medium">{selectedInvoice.customer || 'Khach le'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Phuong thuc:</span>
+                      <Badge variant="outline" className="ml-2">
+                        {getPaymentMethodLabel(selectedInvoice.paymentMethod)}
+                      </Badge>
+                    </div>
+                    {selectedInvoice.note && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Ghi chu:</span>
+                        <span className="ml-2">{selectedInvoice.note}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Items Table */}
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>San pham</TableHead>
+                          <TableHead className="text-right">Don gia</TableHead>
+                          <TableHead className="text-right">So luong</TableHead>
+                          <TableHead className="text-right">Thanh tien</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedInvoice.items?.map((item, index) => {
+                          const saleProduct = item.saleItemId
+                          const name = saleProduct?.name || 'San pham da xoa'
+                          const price = saleProduct?.price || 0
+                          return (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{name}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(price)}</TableCell>
+                              <TableCell className="text-right">{item.quantity}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(price * item.quantity)}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Vouchers Section */}
+                  {selectedInvoice.vouchers && selectedInvoice.vouchers.length > 0 && (
+                    <div className="border rounded-lg">
+                      <div className="px-4 py-2 bg-muted/50 border-b">
+                        <span className="font-medium text-sm">Voucher su dung</span>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Ten voucher</TableHead>
+                            <TableHead className="text-right">Gia tri</TableHead>
+                            <TableHead className="text-right">So luong</TableHead>
+                            <TableHead className="text-right">Giam gia</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedInvoice.vouchers.map((voucherItem, index) => {
+                            const voucher = voucherItem.voucherId
+                            const name = voucher?.name || 'Voucher da xoa'
+                            const price = voucher?.price || 0
+                            return (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{name}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(price)}</TableCell>
+                                <TableCell className="text-right">{voucherItem.quantity}</TableCell>
+                                <TableCell className="text-right text-green-600">-{formatCurrency(price * voucherItem.quantity)}</TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div className="space-y-2 pt-4 border-t">
+                    {(() => {
+                      const subtotal = selectedInvoice.items?.reduce((sum, item) => {
+                        const price = item.saleItemId?.price || 0
+                        return sum + price * item.quantity
+                      }, 0) || 0
+
+                      const voucherDiscount = selectedInvoice.vouchers?.reduce((sum, voucherItem) => {
+                        const price = voucherItem.voucherId?.price || 0
+                        return sum + price * voucherItem.quantity
+                      }, 0) || 0
+
+                      const total = subtotal - voucherDiscount
+
+                      return (
+                        <>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">Tam tinh:</span>
+                            <span>{formatCurrency(subtotal)}</span>
+                          </div>
+                          {voucherDiscount > 0 && (
+                            <div className="flex justify-between items-center text-sm text-green-600">
+                              <span>Giam gia voucher:</span>
+                              <span>-{formatCurrency(voucherDiscount)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center pt-2 border-t">
+                            <span className="text-lg font-semibold">Tong cong:</span>
+                            <span className="text-xl font-bold text-primary">
+                              {formatCurrency(total)}
+                            </span>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+
+                  {/* Close Button */}
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={() => setIsDetailOpen(false)}>
+                      Dong
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Footer */}
           <Footer />
