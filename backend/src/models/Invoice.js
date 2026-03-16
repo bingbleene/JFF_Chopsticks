@@ -38,8 +38,8 @@ const invoiceSchema = new mongoose.Schema(
 
   paymentMethod: {
     type: String,
-    enum: ["momo", "ngân hàng", "tiền mặt"],
-    default: "tiền mặt"
+    enum: ["momo", "ngan hang", "tien mat"],
+    default: "tien mat"
   },
   vouchers: [
     {
