@@ -70,9 +70,9 @@ const InvoicePage = () => {
 
   const getPaymentMethodLabel = (method) => {
     switch (method) {
-      case 'momo': return 'MoMo'
-      case 'ngan hang': return 'Ngan hang'
-      case 'tien mat': return 'Tien mat'
+      case 'momo': return 'momo'
+      case 'ngan hang': return 'ngan hang'
+      case 'tien mat': return 'tien mat'
       default: return method
     }
   }
