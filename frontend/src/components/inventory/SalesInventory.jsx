@@ -227,7 +227,7 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Bán lẻ</CardTitle>
-              <CardDescription>Sản phẩm bán từng cái (1 sản phẩm gốc)</CardDescription>
+              <CardDescription>Sản phẩm bán từng cái</CardDescription>
             </div>
             <Button className="gap-2" onClick={() => openAddForm('retail')}>
               <Plus size={20} />

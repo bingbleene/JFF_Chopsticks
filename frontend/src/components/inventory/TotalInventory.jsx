@@ -216,9 +216,9 @@ const TotalInventory = ({ availableTags = [], onAddTag = () => {} }) => {
               <p className="text-sm text-muted-foreground">
                 Hien thi {filteredProducts.length} / {products.length} san pham
               </p>
-              <p className="text-sm font-medium">
+              {/* <p className="text-sm font-medium">
                 Tong gia tri ton kho: {formatCurrency(totalValue)}
-              </p>
+              </p> */}
             </div>
           )}
         </CardContent>
