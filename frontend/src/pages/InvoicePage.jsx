@@ -86,14 +86,16 @@ const InvoicePage = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-background relative">
-      {/* Background gradient accent */}
+    <div className="min-h-screen w-full bg-white relative">
+      {/* Grid Background */}
       <div
         className="absolute inset-0 z-0"
         style={{
           backgroundImage: `
-            radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.15), transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.15), transparent 50%)`,
+            linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+            linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
         }}
       />
 

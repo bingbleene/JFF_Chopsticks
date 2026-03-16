@@ -45,16 +45,19 @@ const HomePage = () => {
   ]
 
   return (
-    <div className="min-h-screen w-full bg-gradient-background relative">
-      {/* Background gradient accent */}
+    <div className="min-h-screen w-full bg-white relative">
+      {/* Grid Background */}
       <div
         className="absolute inset-0 z-0"
         style={{
           backgroundImage: `
-            radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.15), transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.15), transparent 50%)`,
+            linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+            linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
         }}
       />
+    
 
       <div className="container pt-8 mx-auto">
         <div className="w-full max-w-6xl p-6 mx-auto space-y-6 relative z-10">
