@@ -1,23 +1,21 @@
 {
-  "name": "chopsticks-backend",
+  "name": "journal",
   "version": "1.0.0",
-  "type": "module",
-  "description": "Backend API for Chopsticks inventory management",
-  "main": "src/server.js",
+  "description": "A website made for chopsticks tasks.",
+  "main": "index.js",
   "scripts": {
     "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "npm run start --prefix backend"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bingbleene/JFF_Chopsticks.git"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^8.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1"
+  "bugs": {
+    "url": "https://github.com/bingbleene/JFF_Chopsticks/issues"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.4"
-  }
+  "homepage": "https://github.com/bingbleene/JFF_Chopsticks#readme"
 }
