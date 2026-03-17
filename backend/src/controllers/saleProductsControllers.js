@@ -71,7 +71,7 @@ export const createSaleProduct = async (req, res) => {
     }
 
     const saleProduct = new SaleProduct({
-      name,
+      name: name.trim(),
       description: description || '',
       price,
       items,
@@ -125,33 +125,38 @@ export const updateSaleProduct = async (req, res) => {
       }
     }
 
+    const updateData = {};
+
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = price;
+    if (items !== undefined) updateData.items = items;
+    if (saleType !== undefined) updateData.saleType = saleType;
+    if (tags !== undefined) updateData.tags = tags;
+    if (quantity !== undefined) updateData.quantity = quantity;
+
     const updatedSaleProduct = await SaleProduct.findByIdAndUpdate(
       req.params.id,
-      {
-        name,
-        description,
-        price,
-        items,
-        saleType,
-        tags,
-        quantity
-      },
+      updateData,
       { new: true, runValidators: true }
-    ).populate("items.productId", "name importPrice quantity unit")
+    ).populate("items.productId", "name importPrice quantity unit");
 
     if (!updatedSaleProduct) {
-      return res.status(404).json({ message: 'Sản phẩm bán không tồn tại' })
+      return res.status(404).json({ message: 'Sản phẩm bán không tồn tại' });
     }
 
-    res.status(200).json(updatedSaleProduct)
+    res.status(200).json(updatedSaleProduct);
+
   } catch (error) {
     console.error("Lỗi khi gọi updateSaleProduct:", error);
+
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ message: error.message })
+      return res.status(400).json({ message: error.message });
     }
-    res.status(500).json({ message: "Lỗi hệ thống" })
+
+    res.status(500).json({ message: "Lỗi hệ thống" });
   }
-}
+};
 
 export const deleteSaleProduct = async (req, res) => {
   try {

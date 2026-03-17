@@ -11,8 +11,9 @@ import api from '@/lib/axios'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/hooks'
 import SaleProductForm from './SaleProductForm'
+import ListPagination from '../ListPagination'
 
-const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
+const SalesInventory = ({ availableTags = [], onAddTag = () => {}, onInventoryChanged = () => {}, reloadInventory = 0 }) => {
   const [saleProducts, setSaleProducts] = useState([])
   const [products, setProducts] = useState([])
   const [filteredSaleProducts, setFilteredSaleProducts] = useState([])
@@ -21,10 +22,13 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [formSaleType, setFormSaleType] = useState('retail')
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [reloadInventory])
 
   const fetchData = async () => {
     try {
@@ -53,7 +57,22 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
       product && product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
     setFilteredSaleProducts(filtered)
+    setPage(1); // Reset page khi filter
   }, [searchTerm, saleProducts])
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredSaleProducts.length / pageSize) || 1;
+  const visibleSaleProducts = filteredSaleProducts.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleNext = () => {
+    if (page < totalPages) setPage(prev => prev + 1);
+  };
+  const handlePrev = () => {
+    if (page > 1) setPage(prev => prev - 1);
+  };
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
 
   // Lọc sản phẩm theo loại bán
   const retailProducts = filteredSaleProducts.filter(p => p.saleType === 'retail')
@@ -62,6 +81,7 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
   const handleAddSaleProduct = (newProduct) => {
     setSaleProducts(prev => [newProduct, ...prev])
     setIsFormOpen(false)
+    onInventoryChanged()
   }
 
   const handleUpdateSaleProduct = (updatedProduct) => {
@@ -72,6 +92,7 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
     }))
     setEditingProduct(null)
     setIsFormOpen(false)
+    onInventoryChanged()
   }
 
   const handleDeleteSaleProduct = async (product) => {
@@ -83,6 +104,7 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
       await api.delete(`/sale-products/${productId}`)
       setSaleProducts(prev => prev.filter(p => (p._id || p.id) !== productId))
       toast.success('Xóa sản phẩm bán thành công')
+      onInventoryChanged()
     } catch (error) {
       console.error('Lỗi khi xóa:', error)
       toast.error('Lỗi khi xóa sản phẩm')
@@ -157,59 +179,70 @@ const SalesInventory = ({ availableTags = [], onAddTag = () => {} }) => {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tên sản phẩm</TableHead>
-                    <TableHead>Loại</TableHead>
-                    <TableHead>Sản phẩm gốc</TableHead>
-                    <TableHead className="text-right">Số lượng</TableHead>
-                    <TableHead className="text-right">Giá bán</TableHead>
-                    <TableHead className="text-right">Hành động</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSaleProducts.map(product => (
-                    <TableRow key={product._id || product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={product.saleType === 'retail' ? 'default' : 'secondary'} className="text-xs">
-                          {product.saleType === 'retail' ? 'Bán lẻ' : 'Combo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                        {getProductNames(product.items)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={`px-2 py-1 rounded text-xs ${product.saleType === 'retail' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                          {product.quantity}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(product.price)}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Edit2 size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteSaleProduct(product)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>STT</TableHead>
+                      <TableHead>Tên sản phẩm</TableHead>
+                      <TableHead>Loại</TableHead>
+                      <TableHead>Sản phẩm gốc</TableHead>
+                      <TableHead className="text-right">Số lượng</TableHead>
+                      <TableHead className="text-right">Giá bán</TableHead>
+                      <TableHead className="text-right">Hành động</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleSaleProducts.map((product, idx) => (
+                      <TableRow key={product._id || product.id}>
+                        <TableCell>{(page - 1) * pageSize + idx + 1}</TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={product.saleType === 'retail' ? 'default' : 'secondary'} className="text-xs">
+                            {product.saleType === 'retail' ? 'Bán lẻ' : 'Combo'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                          {getProductNames(product.items)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={`px-2 py-1 rounded text-xs ${product.saleType === 'retail' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                            {product.quantity}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(product.price)}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit2 size={16} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteSaleProduct(product)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <ListPagination
+                handleNext={handleNext}
+                handlePrev={handlePrev}
+                handlePageChange={handlePageChange}
+                page={page}
+                totalPages={totalPages}
+              />
+            </>
           )}
 
           {/* Summary */}

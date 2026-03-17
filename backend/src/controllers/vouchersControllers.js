@@ -51,29 +51,35 @@ export const createVoucher = async (req, res) => {
 
 export const updateVoucher = async (req, res) => {
   try {
-    const { name, description, price, quantity } = req.body
+    const allowedFields = ['name', 'description', 'price', 'quantity'];
+
+    const updateData = Object.fromEntries(
+      Object.entries(req.body)
+        .filter(([key, value]) =>
+          allowedFields.includes(key) && value !== undefined
+        )
+    );
+
+    if (typeof updateData.name === "string") {
+      updateData.name = updateData.name.trim();
+    }
 
     const updatedVoucher = await Voucher.findByIdAndUpdate(
       req.params.id,
-      {
-        name,
-        description,
-        price,
-        quantity
-      },
+      updateData,
       { new: true, runValidators: true }
-    )
+    );
 
     if (!updatedVoucher) {
-      return res.status(404).json({ message: 'Voucher không tồn tại' })
+      return res.status(404).json({ message: 'Voucher không tồn tại' });
     }
 
-    res.status(200).json(updatedVoucher)
+    res.status(200).json(updatedVoucher);
   } catch (error) {
     console.error("Lỗi khi gọi updateVoucher:", error);
-    res.status(500).json({ message: "Lỗi hệ thống" })
+    res.status(500).json({ message: "Lỗi hệ thống" });
   }
-}
+};
 
 export const deleteVoucher = async (req, res) => {
   try {

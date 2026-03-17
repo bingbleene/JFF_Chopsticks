@@ -11,6 +11,7 @@ import { Plus, Minus, Trash2, ShoppingCart, Receipt, Search, CreditCard, Banknot
 import api from '@/lib/axios'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/hooks'
+import { paymentMethods, getPaymentMethodLabel } from '@/lib/data'
 
 const InvoiceForm = ({ onSuccess }) => {
   // Data states
@@ -24,6 +25,7 @@ const InvoiceForm = ({ onSuccess }) => {
 
   // Form states
   const [staff, setStaff] = useState('')
+  const [staffList, setStaffList] = useState([])
   const [customer, setCustomer] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('tien mat')
   const [note, setNote] = useState('')
@@ -35,6 +37,7 @@ const InvoiceForm = ({ onSuccess }) => {
 
   useEffect(() => {
     fetchData()
+    fetchStaff()
   }, [])
 
   const fetchData = async () => {
@@ -48,15 +51,22 @@ const InvoiceForm = ({ onSuccess }) => {
       const saleList = Array.isArray(saleProductsRes.data) ? saleProductsRes.data : []
       const voucherList = Array.isArray(vouchersRes.data) ? vouchersRes.data : []
 
-      // Chi lay san pham co so luong > 0
       setSaleProducts(saleList.filter(p => p.quantity > 0))
-      // Chi lay voucher con hoat dong va con so luong
       setVouchers(voucherList.filter(v => v.active && v.quantity > 0))
     } catch (error) {
       console.error('Loi khi lay du lieu:', error)
       toast.error('Khong the ket noi toi server')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchStaff = async () => {
+    try {
+      const res = await api.get('/staffs')
+      setStaffList(Array.isArray(res.data) ? res.data : [])
+    } catch (error) {
+      toast.error('Không thể lấy danh sách nhân viên')
     }
   }
 
@@ -93,7 +103,6 @@ const InvoiceForm = ({ onSuccess }) => {
     toast.success(`Da them ${product.name}`)
   }
 
-  // Update cart item quantity
   const updateQuantity = (saleItemId, newQuantity) => {
     if (newQuantity <= 0) {
       removeFromCart(saleItemId)
@@ -110,13 +119,10 @@ const InvoiceForm = ({ onSuccess }) => {
       i.saleItemId === saleItemId ? { ...i, quantity: newQuantity } : i
     ))
   }
-
-  // Remove from cart
   const removeFromCart = (saleItemId) => {
     setCartItems(cartItems.filter(i => i.saleItemId !== saleItemId))
   }
 
-  // Add voucher
   const addVoucher = (voucher) => {
     const existing = selectedVouchers.find(v => v.voucherId === (voucher._id || voucher.id))
     if (existing) {
@@ -140,12 +146,10 @@ const InvoiceForm = ({ onSuccess }) => {
     }
   }
 
-  // Remove voucher
   const removeVoucher = (voucherId) => {
     setSelectedVouchers(selectedVouchers.filter(v => v.voucherId !== voucherId))
   }
 
-  // Update voucher quantity
   const updateVoucherQuantity = (voucherId, newQuantity) => {
     if (newQuantity <= 0) {
       removeVoucher(voucherId)
@@ -163,7 +167,6 @@ const InvoiceForm = ({ onSuccess }) => {
     ))
   }
 
-  // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   const voucherDiscount = selectedVouchers.reduce((sum, v) => sum + (v.price * v.quantity), 0)
   const total = Math.max(0, subtotal - voucherDiscount)
@@ -171,11 +174,11 @@ const InvoiceForm = ({ onSuccess }) => {
   // Validate form
   const validateForm = () => {
     if (cartItems.length === 0) {
-      toast.error('Vui long chon it nhat 1 san pham')
+      toast.error('Vui lòng chọn ít nhất 1 sản phẩm')
       return false
     }
-    if (!staff.trim()) {
-      toast.error('Vui long nhap ten nhan vien')
+    if (!staff) {
+      toast.error('Vui lòng chọn nhân viên')
       return false
     }
     return true
@@ -197,14 +200,15 @@ const InvoiceForm = ({ onSuccess }) => {
           saleItemId: item.saleItemId,
           quantity: item.quantity
         })),
-        staff: staff.trim(),
-        customer: customer.trim() || 'Khach le',
+        staff,
+        customer: customer.trim() || 'Khách lẻ',
         paymentMethod,
         vouchers: selectedVouchers.map(v => ({
           voucherId: v.voucherId,
           quantity: v.quantity
         })),
-        note: note.trim()
+        note: note.trim(),
+        status: 'pending'
       }
 
       const res = await api.post('/invoices', invoiceData)
@@ -225,7 +229,7 @@ const InvoiceForm = ({ onSuccess }) => {
 
       if (onSuccess) onSuccess(res.data)
     } catch (error) {
-      console.error('Loi khi tao hoa don:', error)
+      console.error('Lỗi khi tao hoa don:', error)
       const errorMsg = error.response?.data?.message || 'Loi khi tao hoa don'
       toast.error(errorMsg)
     } finally {
@@ -233,11 +237,7 @@ const InvoiceForm = ({ onSuccess }) => {
     }
   }
 
-  const paymentMethods = [
-    { value: 'tien mat', label: 'Tien mat', icon: Banknote },
-    { value: 'ngan hang', label: 'Ngan hang', icon: CreditCard },
-    { value: 'momo', label: 'MoMo', icon: Smartphone }
-  ]
+  // Tham chiếu paymentMethods từ '@/lib/data'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -509,13 +509,18 @@ const InvoiceForm = ({ onSuccess }) => {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1">
-              <Label htmlFor="staff" className="text-sm">Nhan vien *</Label>
-              <Input
+              <Label htmlFor="staff" className="text-sm">Nhân viên *</Label>
+              <select
                 id="staff"
                 value={staff}
-                onChange={(e) => setStaff(e.target.value)}
-                placeholder="Ten nhan vien"
-              />
+                onChange={e => setStaff(e.target.value)}
+                className="w-full border rounded px-2 py-1 text-sm"
+              >
+                <option value="">-- Chọn nhân viên --</option>
+                {staffList.map(s => (
+                  <option key={s._id} value={s._id}>{s.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1">
@@ -611,7 +616,7 @@ const InvoiceForm = ({ onSuccess }) => {
             <div className="text-sm text-muted-foreground">
               <p>Nhan vien: {staff}</p>
               <p>Khach hang: {customer || 'Khach le'}</p>
-              <p>Thanh toan: {paymentMethods.find(m => m.value === paymentMethod)?.label}</p>
+              <p>Thanh toán: {getPaymentMethodLabel(paymentMethod)}</p>
             </div>
           </div>
 

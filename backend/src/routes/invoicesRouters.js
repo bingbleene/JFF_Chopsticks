@@ -1,5 +1,5 @@
 import express from "express"
-import { createInvoice, deleteInvoice, getAllInvoices, getInvoice, updateInvoice } from "../controllers/invoicesControllers.js"
+import { createInvoice, deleteInvoice, getAllInvoices, getInvoice, updateInvoice, cancelInvoice } from "../controllers/invoicesControllers.js"
 
 const router = express.Router()
 
@@ -12,5 +12,7 @@ router.post("/", createInvoice)
 router.put("/:id", updateInvoice)
 
 router.delete("/:id", deleteInvoice)
+
+router.put("/:id/cancel", cancelInvoice);
 
 export default router

@@ -6,9 +6,10 @@ import Voucher from '../models/Voucher.js'
 export const getAllInvoices = async (req, res) => {
     try {
         const invoices = await Invoice.find()
-            .populate('items.saleItemId', 'name price saleType')
-            .populate('vouchers.voucherId', 'name price')
-            .sort({ dateBought: -1})
+          .populate('items.saleItemId', 'name price saleType')
+          .populate('vouchers.voucherId', 'name price')
+          .populate('staff', 'name number')
+          .sort({ dateBought: -1})
         res.status(200).json(invoices)
     } catch (error) {
         console.error("Lỗi khi gọi getAllInvoices:", error);
@@ -19,8 +20,9 @@ export const getAllInvoices = async (req, res) => {
 export const getInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id)
-        .populate('items.saleItemId', 'name price saleType')
-        .populate('vouchers.voucherId', 'name price')
+      .populate('items.saleItemId', 'name price saleType')
+      .populate('vouchers.voucherId', 'name price')
+      .populate('staff', 'name number')
     if (!invoice) {
       return res.status(404).json({ message: 'Hóa đơn không tồn tại' })
     }
@@ -33,9 +35,9 @@ export const getInvoice = async (req, res) => {
 
 export const createInvoice = async (req, res) => {
   try {
-    const {  items, staff, customer, paymentMethod, vouchers, note } = req.body
+    const {  items, staff, customer, paymentMethod, vouchers, note, status } = req.body
 
-    if ( !items || !staff || items.length === 0 || !paymentMethod) {
+    if ( !items || !staff || items.length === 0 || !paymentMethod ) {
       return res.status(400).json({
         message: 'Vui lòng điền đầy đủ thông tin hóa đơn'
       })
@@ -99,10 +101,11 @@ export const createInvoice = async (req, res) => {
       invoiceIndex,
       items,
       staff,
-      customer: customer || "Khách lẻ",
-      paymentMethod: paymentMethod || "tiền mặt",
+      customer: customer || "Khach Le",
+      paymentMethod: paymentMethod || "tien mat",
       vouchers: vouchers || [],
-      note: note || ""
+      note: note || "",
+      status: status || "pending"
     })
 
     const newInvoice = await invoice.save()
@@ -115,29 +118,79 @@ export const createInvoice = async (req, res) => {
 
 export const updateInvoice = async (req, res) => {
   try {
-    const { invoiceIndex, items, staff, customer, paymentMethod, vouchers, note } = req.body
+    const allowedFields = [
+      'invoiceIndex',
+      // 'items',
+      'staff',
+      'customer',
+      'paymentMethod',
+      'vouchers',
+      'note',
+      'status'
+    ];
+
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).filter(
+        ([key, value]) => allowedFields.includes(key) && value !== undefined
+      )
+    );
 
     const updatedInvoice = await Invoice.findByIdAndUpdate(
       req.params.id,
-      {
-        invoiceIndex,
-        items,
-        staff,
-        customer: customer || "Khách lẻ",
-        paymentMethod: paymentMethod || "tiền mặt",
-        vouchers: vouchers || [],
-        note: note || ""
-      },
+      updateData,
       { new: true, runValidators: true }
-    )
+    );
 
     if (!updatedInvoice) {
-      return res.status(404).json({ message: 'Hóa đơn không tồn tại' })
+      return res.status(404).json({ message: 'Hóa đơn không tồn tại' });
     }
 
-    res.status(200).json(updatedInvoice)
+    res.status(200).json(updatedInvoice);
   } catch (error) {
     console.error("Lỗi khi gọi updateInvoice:", error);
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const cancelInvoice = async (req, res) => {
+  try {    
+    const cancelInvoice = await Invoice.findById(req.params.id)
+
+    if (!cancelInvoice) {
+      return res.status(404).json({ message: 'Hóa đơn không tồn tại' })
+    }
+    for (const item of cancelInvoice.items) {
+        const saleProduct = await SaleProduct.findById(item.saleItemId)
+        if (saleProduct) {
+          // Trả lại số lượng sản phẩm trong kho
+          saleProduct.quantity += item.quantity;
+          await saleProduct.save();
+
+            for (const comboItem of saleProduct.items) {
+                const comboSaleProduct = await Product.findById(comboItem.productId)
+                if (comboSaleProduct) {
+                    comboSaleProduct.quantity += comboItem.quantity * item.quantity;
+                    await comboSaleProduct.save();
+                }
+            }
+        }
+    }
+
+    // Trả lại số lượng voucher nếu có
+    if (cancelInvoice.vouchers && cancelInvoice.vouchers.length > 0) {
+        for (const voucherItem of cancelInvoice.vouchers) {
+            const voucher = await Voucher.findById(voucherItem.voucherId);
+            if (voucher) {
+                voucher.quantity += voucherItem.quantity;
+                await voucher.save();
+            }
+        }
+    }
+    cancelInvoice.status = 'cancelled';
+    await cancelInvoice.save();
+    res.status(200).json(cancelInvoice);
+  } catch (error) {
+    console.error("Lỗi khi gọi cancelInvoice:", error);
     res.status(500).json({ message: "Lỗi hệ thống" })
   }
 }

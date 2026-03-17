@@ -40,10 +40,7 @@ const ProductManagementPage = () => {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="total">Hàng hóa tổng</TabsTrigger>
-              <TabsTrigger value="sales">Hàng hóa bán (bán lẻ & combo)</TabsTrigger>
-            </TabsList>
+            
 
             {/* Total Inventory Tab */}
             <TabsContent value="total" className="space-y-6">

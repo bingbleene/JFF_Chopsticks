@@ -27,7 +27,8 @@ const invoiceSchema = new mongoose.Schema(
     }
   ],
   staff: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Staff",
     required: true
   },
 
@@ -56,6 +57,11 @@ const invoiceSchema = new mongoose.Schema(
   note: {
     type: String,
     default: ""
+  },
+  status: {
+    type: String,
+    enum: ["pending", "paid", "cancelled"],
+    default: "pending"
   }
 },
 { timestamps: true }

@@ -41,7 +41,7 @@ export const createProduct = async (req, res) => {
     }
 
     const product = new Product({
-      name,
+      name: name.trim(),
       quantity,
       importPrice,
       unit: unit || 'cái',
@@ -59,43 +59,59 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const { name, quantity, importPrice, unit, description, tags } = req.body
+    const allowedFields = ['name', 'quantity', 'importPrice', 'unit', 'description', 'tags'];
 
-    if (name) {
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).filter(
+        ([key, value]) => allowedFields.includes(key) && value !== undefined
+      )
+    );
+
+    if (updateData.name !== undefined) {
+      if (typeof updateData.name !== "string") {
+        return res.status(400).json({ message: "Tên sản phẩm không hợp lệ" });
+      }
+
+      const trimmedName = updateData.name.trim();
+
       const existingProduct = await Product.findOne({
-        name: name.trim(),
+        name: trimmedName,
         _id: { $ne: req.params.id }
-      })
+      });
+
       if (existingProduct) {
         return res.status(400).json({
           message: 'Sản phẩm với tên này đã tồn tại'
-        })
+        });
       }
+
+      updateData.name = trimmedName;
+    }
+
+    if (updateData.quantity !== undefined && updateData.quantity < 0) {
+      return res.status(400).json({ message: "Số lượng không hợp lệ" });
+    }
+
+    if (updateData.importPrice !== undefined && updateData.importPrice < 0) {
+      return res.status(400).json({ message: "Giá nhập không hợp lệ" });
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
-      {
-        name,
-        quantity,
-        importPrice,
-        unit,
-        description,
-        tags
-      },
+      updateData,
       { new: true, runValidators: true }
-    )
+    );
 
     if (!updatedProduct) {
-      return res.status(404).json({ message: 'Sản phẩm không tồn tại' })
+      return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
     }
 
-    res.status(200).json(updatedProduct)
+    res.status(200).json(updatedProduct);
   } catch (error) {
     console.error("Lỗi khi gọi updateProduct:", error);
-    res.status(500).json({ message: "Lỗi hệ thống" })
+    res.status(500).json({ message: "Lỗi hệ thống" });
   }
-}
+};
 
 export const deleteProduct = async (req, res) => {
   try {

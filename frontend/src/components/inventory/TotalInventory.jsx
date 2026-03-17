@@ -11,18 +11,22 @@ import api from '@/lib/axios'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/hooks'
 import ProductForm from './ProductForm'
+import ListPagination from '../ListPagination'
 
-const TotalInventory = ({ availableTags = [], onAddTag = () => {} }) => {
+const TotalInventory = ({ availableTags = [], onAddTag = () => {}, onInventoryChanged = () => {}, reloadInventory = 0 }) => {
   const [products, setProducts] = useState([])
   const [filteredProducts, setFilteredProducts] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     fetchProducts()
-  }, [])
+  }, [reloadInventory])
 
   const fetchProducts = async () => {
     try {
@@ -44,11 +48,27 @@ const TotalInventory = ({ availableTags = [], onAddTag = () => {} }) => {
       product && product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
     setFilteredProducts(filtered)
+    setPage(1); // Reset page khi filter
   }, [searchTerm, products])
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
+  const visibleProducts = filteredProducts.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleNext = () => {
+    if (page < totalPages) setPage(prev => prev + 1);
+  };
+  const handlePrev = () => {
+    if (page > 1) setPage(prev => prev - 1);
+  };
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
 
   const handleAddProduct = (newProduct) => {
     setProducts(prev => [newProduct, ...prev])
     setIsFormOpen(false)
+    onInventoryChanged()
   }
 
   const handleUpdateProduct = (updatedProduct) => {
@@ -59,6 +79,7 @@ const TotalInventory = ({ availableTags = [], onAddTag = () => {} }) => {
     }))
     setEditingProduct(null)
     setIsFormOpen(false)
+    onInventoryChanged()
   }
 
   const handleDeleteProduct = async (product) => {
@@ -70,6 +91,7 @@ const TotalInventory = ({ availableTags = [], onAddTag = () => {} }) => {
       await api.delete(`/products/${productId}`)
       setProducts(prev => prev.filter(p => (p._id || p.id) !== productId))
       toast.success('Xoa san pham thanh cong')
+      onInventoryChanged()
     } catch (error) {
       console.error('Loi khi xoa san pham:', error)
       toast.error('Loi khi xoa san pham')
@@ -151,63 +173,74 @@ const TotalInventory = ({ availableTags = [], onAddTag = () => {} }) => {
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ten san pham</TableHead>
-                    <TableHead>Tag</TableHead>
-                    <TableHead className="text-right">So luong</TableHead>
-                    <TableHead className="text-right">Gia nhap</TableHead>
-                    <TableHead className="text-right">Hanh dong</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map(product => (
-                    <TableRow key={product._id || product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {product.tags && product.tags.length > 0 ? (
-                            product.tags.map((tag, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                          {product.quantity} {product.unit || 'cai'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(product.importPrice)}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Edit2 size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteProduct(product)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>STT</TableHead>
+                      <TableHead>Ten san pham</TableHead>
+                      <TableHead>Tag</TableHead>
+                      <TableHead className="text-right">So luong</TableHead>
+                      <TableHead className="text-right">Gia nhap</TableHead>
+                      <TableHead className="text-right">Hanh dong</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleProducts.map((product, idx) => (
+                      <TableRow key={product._id || product.id}>
+                        <TableCell>{(page - 1) * pageSize + idx + 1}</TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {product.tags && product.tags.length > 0 ? (
+                              product.tags.map((tag, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                            {product.quantity} {product.unit || 'cai'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(product.importPrice)}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit2 size={16} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteProduct(product)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <ListPagination
+                handleNext={handleNext}
+                handlePrev={handlePrev}
+                handlePageChange={handlePageChange}
+                page={page}
+                totalPages={totalPages}
+              />
+            </>
           )}
 
           {/* Summary */}
