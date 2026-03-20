@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/bingbleene/JFF_Chopsticks/issues"
   },
-  "homepage": "https://github.com/bingbleene/JFF_Chopsticks#readme"
+  "homepage": "https://github.com/bingbleene/JFF_Chopsticks#readme",
+  "dependencies": {
+    "tailwindcss-animate": "^1.0.7"
+  }
 }
