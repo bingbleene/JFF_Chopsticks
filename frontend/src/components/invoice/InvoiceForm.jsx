@@ -3,6 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Calendar as CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -12,6 +16,7 @@ import api from '@/lib/axios'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/hooks'
 import { paymentMethods, getPaymentMethodLabel } from '@/lib/data'
+
 
 const InvoiceForm = ({ onSuccess }) => {
   // Data states
@@ -23,17 +28,34 @@ const InvoiceForm = ({ onSuccess }) => {
   const [cartItems, setCartItems] = useState([])
   const [selectedVouchers, setSelectedVouchers] = useState([])
 
+
+  // Helper to get importPrice from saleProducts
+  const getImportPrice = (saleItemId) => {
+    const product = saleProducts.find(p => (p._id || p.id) === saleItemId)
+    if (!product) return 0
+    if (product.saleType === 'retail' && product.items && product.items.length === 1) {
+      return product.items[0].importPrice || 0
+    } else if (product.saleType === 'combo' && product.items && product.items.length > 0) {
+      // For combo, importPrice is the sum of all items' importPrice * quantity in combo
+      return product.items.reduce((sum, i) => sum + (i.importPrice || 0) * (i.quantity || 1), 0)
+    }
+    return 0
+  }
+
   // Form states
   const [staff, setStaff] = useState('')
   const [staffList, setStaffList] = useState([])
   const [customer, setCustomer] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('tien mat')
   const [note, setNote] = useState('')
+  const [dateCreated, setDateCreated] = useState(() => new Date())
 
   // UI states
   const [searchTerm, setSearchTerm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
+
 
   useEffect(() => {
     fetchData()
@@ -82,7 +104,7 @@ const InvoiceForm = ({ onSuccess }) => {
     if (existingItem) {
       // Check if can add more
       if (existingItem.quantity >= product.quantity) {
-        toast.warning(`Chi con ${product.quantity} san pham trong kho`)
+        toast.warning(`Chỉ còn ${product.quantity} sản phẩm trong kho`)
         return
       }
       setCartItems(cartItems.map(item =>
@@ -100,7 +122,7 @@ const InvoiceForm = ({ onSuccess }) => {
         quantity: 1
       }])
     }
-    toast.success(`Da them ${product.name}`)
+    toast.success(`Đã thêm ${product.name}`)
   }
 
   const updateQuantity = (saleItemId, newQuantity) => {
@@ -111,7 +133,7 @@ const InvoiceForm = ({ onSuccess }) => {
 
     const item = cartItems.find(i => i.saleItemId === saleItemId)
     if (newQuantity > item.maxQuantity) {
-      toast.warning(`Chi con ${item.maxQuantity} san pham trong kho`)
+      toast.warning(`Chỉ còn ${item.maxQuantity} sản phẩm trong kho`)
       return
     }
 
@@ -127,7 +149,7 @@ const InvoiceForm = ({ onSuccess }) => {
     const existing = selectedVouchers.find(v => v.voucherId === (voucher._id || voucher.id))
     if (existing) {
       if (existing.quantity >= voucher.quantity) {
-        toast.warning(`Chi con ${voucher.quantity} voucher`)
+        toast.warning(`Chỉ còn ${voucher.quantity} voucher`)
         return
       }
       setSelectedVouchers(selectedVouchers.map(v =>
@@ -139,7 +161,8 @@ const InvoiceForm = ({ onSuccess }) => {
       setSelectedVouchers([...selectedVouchers, {
         voucherId: voucher._id || voucher.id,
         name: voucher.name,
-        price: voucher.price,
+        type: voucher.type,
+        value: voucher.value,
         maxQuantity: voucher.quantity,
         quantity: 1
       }])
@@ -158,7 +181,7 @@ const InvoiceForm = ({ onSuccess }) => {
 
     const voucher = selectedVouchers.find(v => v.voucherId === voucherId)
     if (newQuantity > voucher.maxQuantity) {
-      toast.warning(`Chi con ${voucher.maxQuantity} voucher`)
+      toast.warning(`Chỉ còn ${voucher.maxQuantity} voucher`)
       return
     }
 
@@ -168,7 +191,27 @@ const InvoiceForm = ({ onSuccess }) => {
   }
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const voucherDiscount = selectedVouchers.reduce((sum, v) => sum + (v.price * v.quantity), 0)
+  // Tính tổng giảm giá từ voucher theo type/value
+  // Chỉ cho phép 1 voucher 'original_price' trên 1 hóa đơn
+  let hasOriginalPriceVoucher = false;
+  const voucherDiscount = selectedVouchers.reduce((sum, v) => {
+    const voucher = vouchers.find(vc => (vc._id || vc.id) === v.voucherId)
+    if (!voucher) return sum
+    if (voucher.type === 'percentage') {
+      return sum + Math.round(subtotal * (voucher.value / 100)) * v.quantity
+    } else if (voucher.type === 'fixed') {
+      return sum + voucher.value * v.quantity
+    } else if (voucher.type === 'original_price') {
+      if (hasOriginalPriceVoucher) return sum; 
+      hasOriginalPriceVoucher = true;
+      const importTotal = cartItems.reduce((s, item) => {
+        const importPrice = getImportPrice(item.saleItemId)
+        return s + importPrice * item.quantity
+      }, 0)
+      return sum + (subtotal - importTotal)
+    }
+    return sum
+  }, 0)
   const total = Math.max(0, subtotal - voucherDiscount)
 
   // Validate form
@@ -208,7 +251,8 @@ const InvoiceForm = ({ onSuccess }) => {
           quantity: v.quantity
         })),
         note: note.trim(),
-        status: 'pending'
+        status: 'pending',
+        dateCreated: dateCreated ? dateCreated.toISOString() : new Date().toISOString()
       }
 
       const res = await api.post('/invoices', invoiceData)
@@ -237,8 +281,6 @@ const InvoiceForm = ({ onSuccess }) => {
     }
   }
 
-  // Tham chiếu paymentMethods từ '@/lib/data'
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left: Product Selection */}
@@ -247,16 +289,16 @@ const InvoiceForm = ({ onSuccess }) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShoppingCart size={24} />
-              Chon san pham
+              Chọn sản phẩm
             </CardTitle>
-            <CardDescription>Chon san pham de them vao hoa don</CardDescription>
+            <CardDescription>Chọn sản phẩm để thêm vào hóa đơn</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Search */}
             <div className="flex items-center gap-2">
               <Search size={20} className="text-muted-foreground" />
               <Input
-                placeholder="Tim kiem san pham..."
+                placeholder="ìm kiếm sản phẩm..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
@@ -266,12 +308,12 @@ const InvoiceForm = ({ onSuccess }) => {
             {/* Products Grid */}
             {isLoading ? (
               <Alert>
-                <AlertDescription>Dang tai du lieu...</AlertDescription>
+                <AlertDescription>Đang tải dữ liệu...</AlertDescription>
               </Alert>
             ) : filteredProducts.length === 0 ? (
               <Alert>
                 <AlertDescription>
-                  {searchTerm ? 'Khong tim thay san pham' : 'Khong co san pham nao'}
+                  {searchTerm ? 'Không tìm thấy sản phẩm' : 'Không có sản phẩm nào'}
                 </AlertDescription>
               </Alert>
             ) : (
@@ -293,7 +335,7 @@ const InvoiceForm = ({ onSuccess }) => {
                       <p className="font-medium text-sm truncate">{product.name}</p>
                       <p className="text-primary font-bold">{formatCurrency(product.price)}</p>
                       {inCart && (
-                        <p className="text-xs text-primary mt-1">Trong gio: {inCart.quantity}</p>
+                        <p className="text-xs text-primary mt-1">Trong giỏ: {inCart.quantity}</p>
                       )}
                     </div>
                   )
@@ -307,8 +349,8 @@ const InvoiceForm = ({ onSuccess }) => {
         {vouchers.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Voucher giam gia</CardTitle>
-              <CardDescription>Chon voucher va so luong muon ap dung</CardDescription>
+              <CardTitle className="text-lg">Voucher giảm giá</CardTitle>
+              <CardDescription>Chọn voucher và số lượng muốn áp dụng</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -327,7 +369,11 @@ const InvoiceForm = ({ onSuccess }) => {
                         <span className="text-xs text-muted-foreground">Con: {voucher.quantity}</span>
                       </div>
                       <p className="font-medium text-sm truncate">{voucher.name}</p>
-                      <p className="text-green-600 font-bold text-sm">-{formatCurrency(voucher.price)}</p>
+                      <p className="text-green-600 font-bold text-sm">
+                        {voucher.type === 'percentage' && `-${voucher.value}%`}
+                        {voucher.type === 'fixed' && `-${formatCurrency(voucher.value)}`}
+                        {voucher.type === 'original_price' && 'Giá gốc'}
+                      </p>
 
                       {/* Quantity controls */}
                       <div className="flex items-center justify-between mt-3 pt-2 border-t">
@@ -370,7 +416,7 @@ const InvoiceForm = ({ onSuccess }) => {
                             onClick={() => addVoucher(voucher)}
                           >
                             <Plus size={14} />
-                            Chon voucher
+                            Chọn voucher
                           </Button>
                         )}
                       </div>
@@ -390,22 +436,35 @@ const InvoiceForm = ({ onSuccess }) => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Receipt size={20} />
-              Gio hang ({cartItems.length})
+              Giỏ hàng ({cartItems.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {cartItems.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Chua co san pham nao
+                Chưa có sản phẩm nào
               </p>
             ) : (
               <>
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {cartItems.map(item => (
+                  {cartItems.map(item => {
+                    // Kiểm tra có voucher original_price không
+                    const hasOriginalPriceVoucher = selectedVouchers.some(v => {
+                      const voucher = vouchers.find(vc => (vc._id || vc.id) === v.voucherId)
+                      return voucher && voucher.type === 'original_price'
+                    })
+                    const importPrice = getImportPrice(item.saleItemId)
+                    return (
                     <div key={item.saleItemId} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatCurrency(item.price)}</p>
+                        <p className="text-xs text-muted-foreground"> Giá bán: {formatCurrency(item.price)}
+                          {hasOriginalPriceVoucher && (
+                            <p className="text-green-700">
+                              <span className="">Giá gốc: {formatCurrency(importPrice)}</span>
+                            </p>
+                          )}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -435,7 +494,8 @@ const InvoiceForm = ({ onSuccess }) => {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
 
                 {/* Selected Vouchers */}
@@ -446,7 +506,20 @@ const InvoiceForm = ({ onSuccess }) => {
                       <div key={v.voucherId} className="flex items-center justify-between p-2 bg-green-50 rounded mb-1">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-green-700 truncate">{v.name}</p>
-                          <p className="text-xs text-green-600">-{formatCurrency(v.price * v.quantity)}</p>
+                          <p className="text-xs text-green-600">
+                            {(() => {
+                              const voucher = vouchers.find(vc => (vc._id || vc.id) === v.voucherId)
+                              if (!voucher) return null
+                              if (voucher.type === 'percentage') {
+                                return `-${Math.round(subtotal * (voucher.value / 100)) * v.quantity}₫`
+                              } else if (voucher.type === 'fixed') {
+                                return `-${formatCurrency(voucher.value * v.quantity)}`
+                              } else if (voucher.type === 'original_price') {
+                                return 'Giá gốc'
+                              }
+                              return null
+                            })()}
+                          </p>
                         </div>
                         <div className="flex items-center gap-1">
                           <Button
@@ -483,17 +556,17 @@ const InvoiceForm = ({ onSuccess }) => {
                 {/* Totals */}
                 <div className="pt-3 border-t space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span>Tam tinh:</span>
+                    <span>Tạm tính:</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
                   {voucherDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
-                      <span>Giam gia:</span>
+                      <span>Giảm giá:</span>
                       <span>-{formatCurrency(voucherDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-bold pt-1">
-                    <span>Tong cong:</span>
+                    <span>Tổng cộng:</span>
                     <span className="text-primary">{formatCurrency(total)}</span>
                   </div>
                 </div>
@@ -505,9 +578,31 @@ const InvoiceForm = ({ onSuccess }) => {
         {/* Customer Info */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Thong tin hoa don</CardTitle>
+            <CardTitle className="text-lg">Thông tin hóa đơn</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="dateCreated" className="text-sm">Ngày tạo hóa đơn</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={"w-full justify-start text-left font-normal " + (!dateCreated ? 'text-muted-foreground' : '')}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateCreated ? format(dateCreated, "PPP") : <span>Chọn ngày</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateCreated}
+                    onSelect={setDateCreated}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             <div className="space-y-1">
               <Label htmlFor="staff" className="text-sm">Nhân viên *</Label>
               <select
@@ -524,17 +619,17 @@ const InvoiceForm = ({ onSuccess }) => {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="customer" className="text-sm">Khach hang</Label>
+              <Label htmlFor="customer" className="text-sm">Khách hàng</Label>
               <Input
                 id="customer"
                 value={customer}
                 onChange={(e) => setCustomer(e.target.value)}
-                placeholder="Khach le"
+                placeholder="Khách lẻ"
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-sm">Phuong thuc thanh toan</Label>
+              <Label className="text-sm">Phương thức thanh toán</Label>
               <div className="flex gap-2">
                 {paymentMethods.map(method => (
                   <Button
@@ -553,12 +648,12 @@ const InvoiceForm = ({ onSuccess }) => {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="note" className="text-sm">Ghi chu</Label>
+              <Label htmlFor="note" className="text-sm">Ghi chú</Label>
               <Textarea
                 id="note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Ghi chu them..."
+                placeholder="Ghi chú thêm..."
                 rows={2}
               />
             </div>
@@ -579,15 +674,15 @@ const InvoiceForm = ({ onSuccess }) => {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xac nhan tao hoa don</DialogTitle>
+            <DialogTitle>Xác nhận tạo hóa đơn</DialogTitle>
             <DialogDescription>
-              Kiem tra lai thong tin truoc khi xac nhan
+              Kiểm tra lại thông tin trước khi xác nhận
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
             <div className="p-3 bg-muted rounded-lg space-y-2">
-              <p className="font-medium">San pham ({cartItems.length}):</p>
+              <p className="font-medium">Sản phẩm ({cartItems.length}):</p>
               {cartItems.map(item => (
                 <div key={item.saleItemId} className="flex justify-between text-sm">
                   <span>{item.name} x{item.quantity}</span>
@@ -609,33 +704,34 @@ const InvoiceForm = ({ onSuccess }) => {
             )}
 
             <div className="flex justify-between font-bold text-lg">
-              <span>Tong thanh toan:</span>
+              <span>Tổng thanh toán:</span>
               <span className="text-primary">{formatCurrency(total)}</span>
             </div>
 
             <div className="text-sm text-muted-foreground">
-              <p>Nhan vien: {staff}</p>
-              <p>Khach hang: {customer || 'Khach le'}</p>
+              <p>Nhân viên: {staff}</p>
+              <p>Khách hàng: {customer || 'Khách lẻ'}</p>
               <p>Thanh toán: {getPaymentMethodLabel(paymentMethod)}</p>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowConfirmDialog(false)}
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              Huy
-            </Button>
+          <div className="flex gap-3 pt-4 items-center">
             <Button
               onClick={confirmSubmit}
               disabled={isSubmitting}
               className="flex-1"
             >
-              {isSubmitting ? 'Dang xu ly...' : 'Xac nhan'}
+              {isSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
             </Button>
+            <button
+              type="button"
+              onClick={() => setShowConfirmDialog(false)}
+              aria-label="Đóng"
+              className="rounded-full p-2 hover:bg-muted transition border border-input text-xl flex items-center justify-center"
+              disabled={isSubmitting}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
           </div>
         </DialogContent>
       </Dialog>

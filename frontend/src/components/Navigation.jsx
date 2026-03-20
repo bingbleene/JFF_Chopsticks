@@ -8,9 +8,10 @@ const Navigation = ({ showBack = true, showHome = true }) => {
   const location = useLocation()
 
   const navLinks = [
-    { path: '/', label: 'Trang chu', icon: Home },
-    { path: '/products', label: 'Hang hoa', icon: Package },
-    { path: '/invoices', label: 'Hoa don', icon: Receipt }
+    { path: '/', label: 'Trang chủ', icon: Home },
+    { path: '/products', label: 'Hàng hóa', icon: Package },
+    { path: '/import', label: 'Nhập hàng', icon: Package },
+    { path: '/invoices', label: 'Hóa đơn', icon: Receipt }
   ]
 
   return (
@@ -24,7 +25,7 @@ const Navigation = ({ showBack = true, showHome = true }) => {
             className="gap-2"
           >
             <ArrowLeft size={16} />
-            Quay lai
+            Quay lại
           </Button>
         )}
       </div>

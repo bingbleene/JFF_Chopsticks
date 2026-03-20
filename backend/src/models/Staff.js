@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 
 const staffSchema = new mongoose.Schema(
 {
+    staffIndex: {
+        type: String,
+        required: true,
+        unique: true
+    },
     name: {
         type: String,
         required: true

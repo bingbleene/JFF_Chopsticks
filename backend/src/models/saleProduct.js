@@ -2,6 +2,11 @@ import mongoose from 'mongoose'
 
 const saleProductSchema = new mongoose.Schema(
   {
+    saleProductIndex: {
+      type: String,
+      required: true,
+      unique: true
+    },
     name: {
       type: String,
       required: [true, 'Tên sản phẩm là bắt buộc'],
@@ -26,13 +31,11 @@ const saleProductSchema = new mongoose.Schema(
       default: 1,
       min: [0, 'Số lượng không được âm']
     },
-    tags: {
-      type: [String],
-      default: []
-    },
-    // items: chứa danh sách sản phẩm từ Product
-    // - retail: chỉ có 1 item duy nhất
-    // - combo: có >= 1 items (nhiều sản phẩm)
+    tag: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tag',
+      default: null
+    }, 
     items: {
       type: [
         {
@@ -45,16 +48,19 @@ const saleProductSchema = new mongoose.Schema(
             type: Number,
             required: true,
             min: [1, 'Số lượng phải ≥ 1']
+          },
+          importPrice: {
+            type:Number,
+            required: true,
+            min: [0, 'Giá nhập phải ≥ 0']
           }
-        }
+          }
       ],
       required: [true, 'Danh sách sản phẩm là bắt buộc'],
       validate: {
         validator: function(items) {
           if (!items || items.length === 0) return false
-          // retail: chỉ có 1 item
           if (this.saleType === 'retail' && items.length !== 1) return false
-          // combo: có ít nhất 1 item
           if (this.saleType === 'combo' && items.length < 1) return false
           return true
         },

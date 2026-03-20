@@ -4,6 +4,8 @@ import salesProductsRoute from './routes/saleProductsRouters.js'
 import vouchersRoute from './routes/vouchersRouters.js'
 import invoicesRoute from './routes/invoicesRouters.js'
 import staffsRoute from './routes/staffsRouters.js'
+import importRouters from './routes/importRouters.js'
+import tagsRouters from './routes/tagsRouters.js'
 import { connectDB } from './config/db.js'
 import dotenv from 'dotenv'
 import cors from 'cors'
@@ -28,6 +30,8 @@ app.use("/api/sale-products", salesProductsRoute)
 app.use("/api/vouchers", vouchersRoute)
 app.use("/api/invoices", invoicesRoute)
 app.use("/api/staffs", staffsRoute)
+app.use("/api/imports", importRouters)
+app.use("/api/tags", tagsRouters)
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")))

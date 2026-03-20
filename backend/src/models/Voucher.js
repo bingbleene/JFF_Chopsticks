@@ -2,6 +2,11 @@ import mongoose from 'mongoose'
 
 const voucherSchema = new mongoose.Schema(
   {
+      voucherIndex: {
+        type: String,
+        required: true,
+        unique: true
+      },  
       name: {
         type: String,
         required: [true, 'Tên voucher là bắt buộc'],
@@ -11,10 +16,17 @@ const voucherSchema = new mongoose.Schema(
         type: String,
         default: ''
       },
-      price: {
+      type: {
+        type: String,
+        enum: ['percentage', 'fixed', 'original_price'],
+        required: [true, 'Loại voucher là bắt buộc']
+       },
+      value: {
         type: Number,
-        required: [true, 'Giá voucher là bắt buộc'],
-        min: [0, 'Giá không được âm']
+        min: 0,
+        required: function () {
+          return this.type !== 'original_price';
+        }
       },
       quantity: {
         type: Number,

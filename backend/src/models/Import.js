@@ -23,6 +23,11 @@ const importSchema = new mongoose.Schema(
                 type: Number,
                 required: true,
                 min: [1, 'Số lượng phải ≥ 1']
+              },
+              price: {
+                type: Number,
+                required: true,
+                min: [0, 'Giá phải ≥ 0']
               }
             }
           ],
@@ -38,8 +43,13 @@ const importSchema = new mongoose.Schema(
         default: ""
     },
     tag: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tag'
+    },
+    status: {
         type: String,
-        default: ""
+        enum: ['active', 'cancelled'],
+        default: 'active'
     }
 },
     

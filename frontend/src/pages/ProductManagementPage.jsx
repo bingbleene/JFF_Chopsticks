@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import Navigation from '../components/Navigation'
-import TotalInventory from '../components/inventory/TotalInventory'
-import SalesInventory from '../components/inventory/SalesInventory'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import InventoryTabs from '../components/inventory/InventoryTabs'
 
 const ProductManagementPage = () => {
   const [activeTab, setActiveTab] = useState('total')
@@ -39,19 +37,12 @@ const ProductManagementPage = () => {
           <Header />
 
           {/* Tabs Navigation */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            
-
-            {/* Total Inventory Tab */}
-            <TabsContent value="total" className="space-y-6">
-              <TotalInventory availableTags={availableTags} onAddTag={handleAddTag} />
-            </TabsContent>
-
-            {/* Sales Inventory Tab */}
-            <TabsContent value="sales" className="space-y-6">
-              <SalesInventory />
-            </TabsContent>
-          </Tabs>
+          <InventoryTabs
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            availableTags={availableTags}
+            onAddTag={handleAddTag}
+          />
 
           {/* Footer */}
           <Footer />

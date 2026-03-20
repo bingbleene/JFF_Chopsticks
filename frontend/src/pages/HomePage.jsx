@@ -23,7 +23,7 @@ const HomePage = () => {
       title: 'Tạo đơn nhập hàng',
       description: 'Nhập hàng từ nhà cung cấp',
       icon: ShoppingCart,
-      href: '/import-orders',
+      href: '/import',
       color: 'bg-green-100'
     },
     {

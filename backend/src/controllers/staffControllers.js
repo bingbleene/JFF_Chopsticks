@@ -40,7 +40,21 @@ export const createStaff = async (req, res) => {
       })
     }
 
+    // tạo staff index từ động ST + mm + yy + xxxx (number)
+    const now = new Date();
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0'); 
+    const yy = now.getFullYear().toString().slice(-2); 
+    const prefix = `ST${mm}${yy}`;
+    let index = 1;
+    const lastStaff = await Staff.findOne({ staffIndex: { $regex: `^${prefix}` } }).sort({ staffIndex: -1 });
+    if (lastStaff && lastStaff.staffIndex) {
+      const lastNumberStr = lastStaff.staffIndex.slice(-4);
+      index = parseInt(lastNumberStr) + 1;
+    }
+    const staffIndex = `${prefix}${index.toString().padStart(4, '0')}`;
+
     const staff = new Staff({
+      staffIndex,
       name,
       number,
       phone,

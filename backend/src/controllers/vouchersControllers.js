@@ -25,19 +25,60 @@ export const getVoucher = async (req, res) => {
 
 export const createVoucher = async (req, res) => {
   try {
-    const { name, description, price, quantity } = req.body
+    const { name, description, type, value, quantity } = req.body
 
     // Validate required fields
-    if (!name || !price || quantity === undefined) {
+    if (!name || !type || quantity === undefined) {
       return res.status(400).json({
         message: 'Vui lòng điền đầy đủ thông tin voucher'
       })
     }
 
+    // Validate type    
+    const validTypes = ['percentage', 'fixed', 'original_price']
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        message: 'Loại voucher không hợp lệ validTypes: percentage, fixed, original_price'
+      })
+    }
+
+    // Validate value based on type
+    if (type === 'percentage' && (value < 0 || value > 100)) {
+      return res.status(400).json({
+        message: 'Giá trị phần trăm phải từ 0 đến 100'
+      })
+    }
+    if (type === 'fixed' && value < 0) {
+      return res.status(400).json({
+        message: 'Giá trị cố định phải lớn hơn hoặc bằng 0'
+      })
+    }
+    if (type === 'original_price' && value !== undefined) {
+      return res.status(400).json({
+        message: 'Giá trị không được cung cấp khi loại voucher là original_price'
+       })
+     }
+
+      // Tạo voucher index tự động: VO + mm + yy + xxxx (number)
+    const now = new Date();
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0'); 
+    const yy = now.getFullYear().toString().slice(-2); 
+    const prefix = `VO${mm}${yy}`;
+
+    let index = 1;
+    const lastVoucher = await Voucher.findOne({ voucherIndex: { $regex: `^${prefix}` } }).sort({ voucherIndex: -1 });
+    if (lastVoucher && lastVoucher.voucherIndex) {
+      const lastNumberStr = lastVoucher.voucherIndex.slice(-4);
+      index = parseInt(lastNumberStr) + 1;
+    }
+    const voucherIndex = `${prefix}${index.toString().padStart(4, '0')}`;
+
     const voucher = new Voucher({
-      name,
+      voucherIndex,
+      name: name.trim(),
       description: description || '',
-      price,
+      type,
+      value,
       quantity
     })
 
@@ -51,7 +92,7 @@ export const createVoucher = async (req, res) => {
 
 export const updateVoucher = async (req, res) => {
   try {
-    const allowedFields = ['name', 'description', 'price', 'quantity'];
+    const allowedFields = ['name', 'description', 'type',  'value', 'quantity', 'active'];
 
     const updateData = Object.fromEntries(
       Object.entries(req.body)

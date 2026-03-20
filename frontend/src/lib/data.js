@@ -36,4 +36,13 @@ export function getProductTypeLabel(type) {
   return found ? found.label : type;
 }
 
-// Thêm các tham chiếu khác tại đây nếu cần
+// Đơn vị sản phẩm
+export const productUnits = [
+  { value: 'cái', label: 'cái' },
+  { value: 'hộp', label: 'hộp' },
+  { value: 'kg', label: 'kg' },
+  { value: 'lít', label: 'lít' },
+  { value: 'gói', label: 'gói' },
+];
+
+

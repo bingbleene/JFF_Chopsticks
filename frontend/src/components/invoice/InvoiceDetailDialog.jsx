@@ -13,7 +13,7 @@ const InvoiceDetailDialog = ({ open, onOpenChange, selectedInvoice, formatDate, 
       <DialogHeader>
         <div className="flex items-center justify-between">
           <div>
-            <DialogTitle>Chi tiet hoa don {selectedInvoice?.invoiceIndex}</DialogTitle>
+            <DialogTitle>Chi tiết hóa đơn {selectedInvoice?.invoiceIndex}</DialogTitle>
             <DialogDescription className="mt-4"> 
                 <span className="text-muted-foreground">Ngày tạo:</span>
               <span className="ml-2">{selectedInvoice && formatDate(selectedInvoice.dateBought || selectedInvoice.createdAt)}</span>
@@ -35,10 +35,25 @@ const InvoiceDetailDialog = ({ open, onOpenChange, selectedInvoice, formatDate, 
           const price = item.saleItemId?.price || 0;
           return sum + price * item.quantity;
         }, 0) || 0;
-        // Tổng giảm giá từ voucher
+        // Tổng giảm giá từ voucher theo type/value
         const voucherDiscount = selectedInvoice.vouchers?.reduce((sum, v) => {
-          const price = v.voucherId?.price || 0;
-          return sum + price * v.quantity;
+          const voucher = v.voucherId;
+          if (!voucher) return sum;
+          if (voucher.type === 'percentage') {
+            return sum + Math.round(subtotal * (voucher.value / 100)) * v.quantity;
+          } else if (voucher.type === 'fixed') {
+            return sum + voucher.value * v.quantity;
+          } else if (voucher.type === 'original_price') {
+            // Tính tổng giá nhập của các sản phẩm trong giỏ
+            const importTotal = selectedInvoice.items?.reduce((s, item) => {
+              // item.saleItemId.importPrice là giá nhập lưu trong saleItemId (nếu có)
+              const importPrice = item.saleItemId?.importPrice ?? 0;
+              return s + importPrice * item.quantity;
+            }, 0) || 0;
+            // Giảm đúng phần chênh lệch giữa giá bán và giá nhập (áp dụng cho mỗi voucher)
+            return sum + (subtotal - importTotal) * v.quantity;
+          }
+          return sum;
         }, 0) || 0;
         const total = Math.max(0, subtotal - voucherDiscount);
         return (
@@ -60,18 +75,18 @@ const InvoiceDetailDialog = ({ open, onOpenChange, selectedInvoice, formatDate, 
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Khach hang:</span>
-              <span className="ml-2 font-medium">{selectedInvoice.customer || 'Khach le'}</span>
+              <span className="text-muted-foreground">Khách hàng:</span>
+              <span className="ml-2 font-medium">{selectedInvoice.customer || 'Khách lẻ'}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Phuong thuc:</span>
+              <span className="text-muted-foreground">Phương thức:</span>
               <Badge variant="outline" className="ml-2">
                 {getPaymentMethodLabel(selectedInvoice.paymentMethod)}
               </Badge>
             </div>
             {selectedInvoice.note && (
               <div className="col-span-2">
-                <span className="text-muted-foreground">Ghi chu:</span>
+                <span className="text-muted-foreground">Ghi chú:</span>
                 <span className="ml-2">{selectedInvoice.note}</span>
               </div>
             )}

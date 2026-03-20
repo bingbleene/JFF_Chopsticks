@@ -2,6 +2,11 @@ import mongoose from 'mongoose'
 
 const productSchema = new mongoose.Schema(
   {
+    productIndex: {
+      type: String,
+      required: true,
+      unique: true
+    },
     name: {
       type: String,
       required: [true, 'Tên sản phẩm là bắt buộc'],
@@ -10,12 +15,8 @@ const productSchema = new mongoose.Schema(
     quantity: {
       type: Number,
       required: [true, 'Số lượng là bắt buộc'],
-      min: [0, 'Số lượng không được âm']
-    },
-    importPrice: {
-      type: Number,
-      required: [true, 'Giá nhập là bắt buộc'],
-      min: [0, 'Giá nhập không được âm']
+      min: [0, 'Số lượng không được âm'],
+      default: 0
     },
     unit: {
       type: String,
@@ -26,10 +27,10 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
-    tags: {
-      type: [String],
-      default: []
-    }
+    tag: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tag'
+    },
   },
   { timestamps: true }
 )

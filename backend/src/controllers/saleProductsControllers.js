@@ -1,4 +1,5 @@
 import SaleProduct from "../models/saleProduct.js"
+import Import from "../models/Import.js"
 
 export const getAllSaleProducts = async (req, res) => {
   try {
@@ -8,7 +9,8 @@ export const getAllSaleProducts = async (req, res) => {
 
     const saleProducts = await SaleProduct
       .find(query)
-      .populate("items.productId", "name importPrice quantity unit")
+      .populate("items.productId", "name quantity unit")
+      .populate("tag", "name")
       .sort({ createdAt: -1 })
     res.status(200).json(saleProducts)
   } catch (error) {
@@ -20,7 +22,8 @@ export const getAllSaleProducts = async (req, res) => {
 export const getSaleProduct = async (req, res) => {
   try {
     const saleProduct = await SaleProduct.findById(req.params.id)
-      .populate("items.productId", "name importPrice quantity unit")
+      .populate("items.productId", "name quantity unit")
+      .populate("tag", "name")
     if (!saleProduct) {
       return res.status(404).json({ message: 'Sản phẩm bán không tồn tại' })
     }
@@ -31,129 +34,231 @@ export const getSaleProduct = async (req, res) => {
   }
 }
 
+
+export const buildItemsWithImportPrice = async (items) => {
+  const productIds = items.map(i => i.productId.toString());
+
+  const imports = await Import.find({
+    "items.importItemId": { $in: productIds },
+    status: "active"
+  }).sort({ dateImported: -1 }); 
+
+  const newItems = [];
+
+  for (const item of items) {
+    const productId = item.productId.toString();
+
+    const matchedImport = imports.find(imp =>
+      imp.items.some(i => i.importItemId.toString() === productId)
+    );
+
+    if (!matchedImport) {
+      return { error: "Không tìm thấy giá nhập cho sản phẩm" };
+    }
+
+    const importItem = matchedImport.items.find(
+      i => i.importItemId.toString() === productId
+    );
+
+    if (!importItem) {
+      return { error: "Không tìm thấy item trong phiếu nhập" };
+    }
+
+    newItems.push({
+      productId: item.productId,
+      quantity: item.quantity,
+      importPrice: importItem.price
+    });
+  }
+
+  return { data: newItems };
+};
+
 export const createSaleProduct = async (req, res) => {
   try {
-    const { name, description, price, items, saleType, tags, quantity } = req.body
+    const { name, description, price, items, saleType, tag, quantity } = req.body;
 
-    // Validate required fields
+    // 🔥 Validate
     if (!name || price === undefined || !items || items.length === 0 || !saleType) {
       return res.status(400).json({
-        message: 'Vui lòng điền đầy đủ thông tin bắt buộc (tên, giá, loại bán, sản phẩm)'
-      })
+        message: 'Vui lòng điền đầy đủ thông tin bắt buộc (name, price, saleType, items)'
+      });
     }
 
-    // Validate saleType specific rules
-    if (saleType === 'retail') {
-      if (items.length !== 1) {
-        return res.status(400).json({
-          message: 'Sản phẩm bán lẻ (retail) chỉ được có 1 sản phẩm duy nhất'
-        })
-      }
-    } else if (saleType === 'combo') {
-      if (items.length < 1) {
-        return res.status(400).json({
-          message: 'Combo phải có ít nhất 1 sản phẩm'
-        })
-      }
-    } else {
+    if (!['retail', 'combo'].includes(saleType)) {
       return res.status(400).json({
-        message: 'Loại bán hàng không hợp lệ. Chỉ chấp nhận: retail hoặc combo'
-      })
+        message: 'Loại bán hàng không hợp lệ'
+      });
     }
 
-    // Validate each item
+    if (saleType === 'retail' && items.length !== 1) {
+      return res.status(400).json({
+        message: 'Sản phẩm bán lẻ chỉ được có 1 sản phẩm'
+      });
+    }
+
+    if (saleType === 'combo' && items.length < 1) {
+      return res.status(400).json({
+        message: 'Combo phải có ít nhất 1 sản phẩm'
+      });
+    }
+
     for (const item of items) {
       if (!item.productId || !item.quantity || item.quantity < 1) {
         return res.status(400).json({
           message: 'Mỗi sản phẩm phải có productId và số lượng >= 1'
-        })
+        });
       }
     }
 
-    const saleProduct = new SaleProduct({
-      name: name.trim(),
-      description: description || '',
-      price,
-      items,
-      saleType,
-      tags: tags || [],
-      quantity: quantity || 1
-    })
+    const result = await buildItemsWithImportPrice(items);
 
-    const newSaleProduct = await saleProduct.save()
-
-    // Populate before returning
-    const populatedProduct = await SaleProduct.findById(newSaleProduct._id)
-      .populate("items.productId", "name importPrice quantity unit")
-
-    res.status(201).json(populatedProduct)
-  } catch (error) {
-    console.error("Lỗi khi gọi createSaleProduct:", error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ message: error.message })
-    }
-    res.status(500).json({ message: "Lỗi hệ thống" })
-  }
-}
-
-export const updateSaleProduct = async (req, res) => {
-  try {
-    const { name, description, price, items, saleType, tags, quantity } = req.body
-
-    // Validate saleType specific rules if provided
-    if (saleType && items) {
-      if (saleType === 'retail' && items.length !== 1) {
-        return res.status(400).json({
-          message: 'Sản phẩm bán lẻ (retail) chỉ được có 1 sản phẩm duy nhất'
-        })
-      }
-      if (saleType === 'combo' && items.length < 1) {
-        return res.status(400).json({
-          message: 'Combo phải có ít nhất 1 sản phẩm'
-        })
-      }
+    if (result.error) {
+      return res.status(400).json({ message: result.error });
     }
 
-    // Validate each item if provided
-    if (items) {
-      for (const item of items) {
-        if (!item.productId || !item.quantity || item.quantity < 1) {
-          return res.status(400).json({
-            message: 'Mỗi sản phẩm phải có productId và số lượng >= 1'
-          })
+    const now = new Date();
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+    const yy = now.getFullYear().toString().slice(-2);
+    const prefix = `SP${mm}${yy}`;
+
+    let index = 1;
+    let saleProductIndex = '';
+    let newSaleProduct = null;
+    let tryCount = 0;
+    const maxTry = 10;
+
+    while (tryCount < maxTry) {
+      const last = await SaleProduct
+        .findOne({ saleProductIndex: { $regex: `^${prefix}` } })
+        .sort({ saleProductIndex: -1 });
+
+      if (last?.saleProductIndex) {
+        const num = parseInt(last.saleProductIndex.slice(-4));
+        index = num + 1;
+      } else {
+        index = 1;
+      }
+
+      saleProductIndex = `${prefix}${index.toString().padStart(4, '0')}`;
+
+      try {
+        const sp = new SaleProduct({
+          saleProductIndex,
+          name: name.trim(),
+          description: description || '',
+          price,
+          items: result.data,
+          saleType,
+          tag: tag || null,
+          quantity: quantity || 1
+        });
+
+        newSaleProduct = await sp.save();
+        break;
+
+      } catch (err) {
+        if (err.code === 11000 && err.keyPattern?.saleProductIndex) {
+          index++;
+          tryCount++;
+          continue;
+        } else {
+          throw err;
         }
       }
     }
 
-    const updateData = {};
+    if (!newSaleProduct) {
+      return res.status(500).json({
+        message: 'Không thể tạo sản phẩm bán mới'
+      });
+    }
 
-    if (name !== undefined) updateData.name = name.trim();
-    if (description !== undefined) updateData.description = description;
-    if (price !== undefined) updateData.price = price;
-    if (items !== undefined) updateData.items = items;
-    if (saleType !== undefined) updateData.saleType = saleType;
-    if (tags !== undefined) updateData.tags = tags;
-    if (quantity !== undefined) updateData.quantity = quantity;
+    const populatedProduct = await SaleProduct.findById(newSaleProduct._id)
+      .populate("items.productId", "name quantity unit");
+
+    res.status(201).json(populatedProduct);
+
+  } catch (error) {
+    console.error("Lỗi khi gọi createSaleProduct:", error);
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const updateSaleProduct = async (req, res) => {
+  try {
+    const { items, saleType } = req.body;
+
+    const existing = await SaleProduct.findById(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Sản phẩm bán không tồn tại' });
+    }
+
+    const finalItems = items ?? existing.items;
+    const finalSaleType = saleType ?? existing.saleType;
+
+    if (finalSaleType === 'retail' && finalItems.length !== 1) {
+      return res.status(400).json({
+        message: 'Sản phẩm bán lẻ phải có đúng 1 sản phẩm'
+      });
+    }
+
+    if (finalSaleType === 'combo' && finalItems.length < 1) {
+      return res.status(400).json({
+        message: 'Combo phải có ít nhất 1 sản phẩm'
+      });
+    }
+
+    if (items !== undefined) {
+      for (const item of items) {
+        if (!item.productId || !item.quantity || item.quantity < 1) {
+          return res.status(400).json({
+            message: 'Mỗi sản phẩm phải có productId và số lượng >= 1'
+          });
+        }
+      }
+    }
+
+    const allowedFields = [
+      'name',
+      'description',
+      'price',
+      'saleType',
+      'tag',
+      'quantity'
+    ];
+
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).filter(
+        ([key, value]) => allowedFields.includes(key) && value !== undefined
+      )
+    );
+
+    if (updateData.name) {
+      updateData.name = updateData.name.trim();
+    }
+
+    if (items !== undefined) {
+      const result = await buildItemsWithImportPrice(items);
+
+      if (result.error) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      updateData.items = result.data;
+    }
 
     const updatedSaleProduct = await SaleProduct.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
-    ).populate("items.productId", "name importPrice quantity unit");
-
-    if (!updatedSaleProduct) {
-      return res.status(404).json({ message: 'Sản phẩm bán không tồn tại' });
-    }
+    ).populate("items.productId", "name quantity unit");
 
     res.status(200).json(updatedSaleProduct);
 
   } catch (error) {
     console.error("Lỗi khi gọi updateSaleProduct:", error);
-
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ message: error.message });
-    }
-
     res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
