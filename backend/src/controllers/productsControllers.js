@@ -1,5 +1,6 @@
 import Product from '../models/Product.js'
 import Import from '../models/Import.js'
+import mongoose from 'mongoose'
 
 export const getAllProducts = async (req, res) => {
   try {
@@ -91,11 +92,15 @@ export const getProductWithImport = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
+    console.log('REQ BODY:', req.body)
+    console.log('TAG:', req.body.tag)
     const { name, quantity, unit, description, tag } = req.body
 
-    if (!name  || !tag ) {
+    if (!name || !Array.isArray(tag) || tag.length === 0) {
+      console.log('DỮ LIỆU GỬI LÊN:', req.body)
       return res.status(400).json({
-        message: 'Vui lòng điền đầy đủ thông tin bắt buộc'
+        message: 'Vui lòng điền đầy đủ thông tin bắt buộc',
+        data: req.body
       })
     }
 
@@ -121,6 +126,8 @@ export const createProduct = async (req, res) => {
     }
     const productIndex = `${prefix}${index.toString().padStart(4, '0')}`;
 
+    // Chuyển tag thành mảng ObjectId
+    const tagArray = Array.isArray(tag) ? tag.map(id => new mongoose.Types.ObjectId(id)) : [];
 
     const product = new Product({
       productIndex,
@@ -128,7 +135,7 @@ export const createProduct = async (req, res) => {
       quantity: quantity || 0,
       unit: unit || 'cái',
       description: description || '',
-      tag: tag || null
+      tag: tagArray
     })
 
     const newProduct = await product.save()
@@ -172,6 +179,14 @@ export const updateProduct = async (req, res) => {
 
     if (updateData.quantity !== undefined && updateData.quantity < 0) {
       return res.status(400).json({ message: "Số lượng không hợp lệ" });
+    }
+
+    // Nếu có trường tag, chuyển thành mảng ObjectId
+    if (updateData.tag !== undefined) {
+      if (!Array.isArray(updateData.tag)) {
+        return res.status(400).json({ message: "Tag phải là mảng" });
+      }
+      updateData.tag = updateData.tag.map(id => new mongoose.Types.ObjectId(id));
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(

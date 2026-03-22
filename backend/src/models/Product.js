@@ -27,10 +27,11 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
-    tag: {
+    tag: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tag'
-    },
+      ref: 'Tag',
+      default: null
+    }],
   },
   { timestamps: true }
 )

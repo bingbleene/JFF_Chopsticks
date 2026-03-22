@@ -95,18 +95,18 @@ const TotalInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
   }
 
   const handleDeleteProduct = async (product) => {
-    if (!confirm('Ban chac chan muon xoa san pham nay?')) return
+    if (!confirm('Bạn chắc chắn muốn xóa sản phẩm này?')) return
 
     const productId = product._id || product.id
 
     try {
       await api.delete(`/products/${productId}`)
       setProducts(prev => prev.filter(p => (p._id || p.id) !== productId))
-      toast.success('Xoa san pham thanh cong')
+      toast.success('Xóa sản phẩm thành công')
       onInventoryChanged()
     } catch (error) {
-      console.error('Loi khi xoa san pham:', error)
-      toast.error('Loi khi xoa san pham')
+      console.error('Lỗi khi xóa sản phẩm:', error)
+      toast.error('Lỗi khi xóa sản phẩm')
     }
   }
 
@@ -126,8 +126,8 @@ const TotalInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
   // Lấy tên tag từ id hoặc object
   const getProductTags = (product) => {
     let tagIds = [];
-    if (Array.isArray(product.tags)) tagIds = product.tags;
-    else if (product.tags) tagIds = [product.tags];
+    if (Array.isArray(product.tag)) tagIds = product.tag;
+    else if (product.tag) tagIds = [product.tag];
     return tagIds.map(tagId => {
       if (typeof tagId === 'object' && tagId !== null && tagId.name) return tagId.name;
       const found = allTags.find(t => t._id === tagId);
@@ -176,7 +176,7 @@ const TotalInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
           <div className="flex items-center gap-2 mb-4">
             <Search size={20} className="text-muted-foreground" />
             <Input
-              placeholder="Tim kiem san pham..."
+              placeholder="Tìm kiếm sản phẩm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Eye, Ban, MoreHorizontal as MoreHorizontalIcon, ChevronUp } from 'lucide-react';
+import { format } from 'date-fns';
 
 
 
@@ -41,11 +42,11 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
               <TableCell>
                 {(page - 1) * pageSize + idx + 1}
               </TableCell>
-              <TableCell>{imp.importIndex}</TableCell>
-              <TableCell>{new Date(imp.dateImported).toLocaleString()}</TableCell>
-              <TableCell>{imp.staff?.name || '-'}</TableCell>
-              <TableCell>{imp.tag?.name || '-'}</TableCell>
-              <TableCell>
+              <TableCell className="flex flex-wrap gap-1">{imp.importIndex}</TableCell>
+              <TableCell className="font-medium">{imp.dateImported ? format(new Date(imp.dateImported), 'dd/MM/yyyy') : '-'}</TableCell>
+              <TableCell className="font-medium">{imp.staff?.name || '-'}</TableCell>
+              <TableCell className="font-medium">{imp.tag?.name || '-'}</TableCell>
+              <TableCell  className="font-medium">
                 {imp.items && imp.items.length > 0 ? (
                   <ul className="list-disc pl-4">
                     {imp.items.map((item, i) => (
@@ -56,7 +57,7 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
                   </ul>
                 ) : '-'}
               </TableCell>
-              <TableCell>{imp.status === 'active' ? 'Đang hiệu lực' : 'Đã hủy'}</TableCell>
+              <TableCell>{imp.status === 'active' ? 'Sử dụng' : 'Đã hủy'}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
