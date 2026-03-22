@@ -3,6 +3,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -192,7 +193,9 @@ const ImportForm = ({ importData, onSubmit, onClose }) => {
                 className={"w-full justify-start text-left font-normal " + (!formData.dateImported ? 'text-muted-foreground' : '')}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.dateImported ? format(formData.dateImported, "PPP") : <span>Chọn ngày</span>}
+                {formData.dateImported
+                  ? format(formData.dateImported, "EEEE, dd/MM/yyyy", { locale: vi })
+                  : <span>Chọn ngày</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">

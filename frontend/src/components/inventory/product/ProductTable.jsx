@@ -40,18 +40,19 @@ const ProductTable = ({
               <TableCell>{(page - 1) * pageSize + idx + 1}</TableCell>
               <TableCell className="flex flex-wrap gap-1">{product.productIndex || product.code || product.productCode || '-'}</TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {getProductTags(product).length > 0 ? (
-                    getProductTags(product).map((tag, i) => (
-                      <Badge key={i} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted-foreground">-</span>
-                  )}
-                </div>
+              <TableCell className="font-medium">
+                {getProductTags(product).length > 0 ? (
+                  <div className="space-y-1">
+                    {getProductTags(product).map((tag, i) => (
+                      <div key={i} className="text-xs flex items-start">
+                        <span className="mr-2 text-base leading-4" style={{lineHeight: '1.2'}}>•</span>
+                        <span>{tag}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell className="text-right">
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
@@ -66,7 +67,7 @@ const ProductTable = ({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="size-8">
                       <MoreHorizontalIcon />
-                      <span className="sr-only">Open menu</span>
+                      <span className="sr-only">Mở menu</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">

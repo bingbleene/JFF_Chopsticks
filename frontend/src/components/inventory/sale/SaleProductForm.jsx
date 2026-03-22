@@ -274,8 +274,7 @@ const SaleProductForm = ({
             items={products}
             value={products.find(p => (p._id === formData.items[0]?.productId || p.id === formData.items[0]?.productId)) || null}
             onValueChange={val => setFormData(prev => ({ ...prev, items: [{ productId: val ? (val._id || val.id) : '', quantity: 1 }] }))}
-            getOptionValue={p => p._id || p.id}
-            getOptionLabel={p => p.name}
+            itemToStringValue={p => p?.name || ''}
           >
             <ComboboxInput placeholder="Chọn sản phẩm gốc..." />
             <ComboboxContent className="w-[--radix-popover-trigger-width] max-h-60 overflow-y-auto">
@@ -308,8 +307,7 @@ const SaleProductForm = ({
                       items={products}
                       value={products.find(p => (p._id === item.productId || p.id === item.productId)) || null}
                       onValueChange={val => handleItemChange(index, 'productId', val ? (val._id || val.id) : '')}
-                      getOptionValue={p => p._id || p.id}
-                      getOptionLabel={p => p.name}
+                      itemToStringValue={p => p?.name || ''}
                     >
                       <ComboboxInput placeholder="Chọn sản phẩm" />
                       <ComboboxContent>
@@ -358,26 +356,26 @@ const SaleProductForm = ({
         )}
       </div>
 
-      {/* Tags */}
+      {/* Tag */}
       <div className="space-y-2">
-        <Label htmlFor="tags">Tag</Label>
+        <Label>Tag</Label>
         <Combobox
           items={allTags}
-          value={allTags.filter(tag => formData.tags.includes(tag._id))}
-          onValueChange={vals => setFormData(prev => ({ ...prev, tags: Array.isArray(vals) ? vals.map(t => t._id) : [] }))}
-          getOptionValue={t => t._id}
-          getOptionLabel={t => t.name}
-          multiple
+          value={allTags.find(tag => tag._id === formData.tags[0]) || null}
+          onValueChange={tagObj => setFormData(prev => ({ ...prev, tags: tagObj?._id ? [tagObj._id] : [] }))}
+          itemToStringValue={tag => tag?.name || ''}
           disabled={loadingTags}
         >
-          <ComboboxInput placeholder="Chọn tag..." />
+          <ComboboxInput
+            placeholder="Chọn tag"
+            value={allTags.find(tag => tag._id === formData.tags[0])?.name || ''}
+          />
           <ComboboxContent>
             <ComboboxEmpty>Không có tag.</ComboboxEmpty>
             <ComboboxList>
               {(tag) => (
                 <ComboboxItem key={tag._id} value={tag}>
                   {tag.name}
-                  {tag.description && <span className="text-xs text-muted-foreground ml-2">- {tag.description}</span>}
                 </ComboboxItem>
               )}
             </ComboboxList>

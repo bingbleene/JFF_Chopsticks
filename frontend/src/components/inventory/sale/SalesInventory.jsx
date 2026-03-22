@@ -170,12 +170,7 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
 
   // Lấy tags của sản phẩm (hiển thị tên tag)
   const getProductTags = (product) => {
-    const tagIds = product.tags || []
-    return tagIds.map(tagId => {
-      if (typeof tagId === 'object' && tagId !== null && tagId.name) return tagId.name
-      const found = allTags.find(t => t._id === tagId)
-      return found ? found.name : tagId
-    })
+    return product.tag?.name ? [product.tag.name] : []
   }
 
   return (

@@ -7,27 +7,18 @@ import { DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxEmpty,
-} from '@/components/ui/combobox'
-
-import { ChevronDown } from 'lucide-react'
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty, ComboboxChip, ComboboxChips, ComboboxValue, ComboboxChipsInput } from '@/components/ui/combobox'
+import { productUnits } from '@/lib/data'
 import api from '@/lib/axios'
 import { validateRequired, validateNumber } from '@/lib/helpers'
-import { productUnits } from '@/lib/data'
 
-const ProductForm = ({ product, onSubmit, onClose, allProducts = [] }) => {
+const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
   const [formData, setFormData] = useState({
     name: '',
     quantity: 0,
     unit: 'cái',
     description: '',
-    tag: '' // will store single tag _id
+    tag: [] 
   })
   const [allTags, setAllTags] = useState([])
   const [errors, setErrors] = useState({})
@@ -49,22 +40,30 @@ const ProductForm = ({ product, onSubmit, onClose, allProducts = [] }) => {
 
   useEffect(() => {
     if (product) {
+      // Đảm bảo tag luôn là mảng object tag
+      let tagArr = [];
+      if (Array.isArray(product.tag)) {
+        tagArr = product.tag.map(t =>
+          typeof t === 'object' ? t : allTags.find(tag => tag._id === t)
+        ).filter(Boolean);
+      } else if (product.tag) {
+        tagArr = [typeof product.tag === 'object' ? product.tag : allTags.find(tag => tag._id === product.tag)].filter(Boolean);
+      }
       setFormData({
         name: product.name || '',
         quantity: product.quantity ?? 0,
         unit: product.unit || 'cái',
         description: product.description || '',
-        tag: product && Array.isArray(product.tags) && product.tags.length > 0
-          ? (typeof product.tags[0] === 'object' && product.tags[0]._id ? product.tags[0]._id : product.tags[0])
-          : ''
+        tag: tagArr
       })
     } else {
       setFormData(prev => ({
         ...prev,
-        quantity: 0
+        quantity: 0,
+        tag: []
       }))
     }
-  }, [product])
+  }, [product, allTags])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -78,13 +77,6 @@ const ProductForm = ({ product, onSubmit, onClose, allProducts = [] }) => {
         [name]: ''
       }))
     }
-  }
-
-
-
-  // Tag select handler
-  const handleTagChange = (value) => {
-    setFormData(prev => ({ ...prev, tag: value }))
   }
 
   const validateForm = () => {
@@ -128,13 +120,15 @@ const ProductForm = ({ product, onSubmit, onClose, allProducts = [] }) => {
     try {
       setIsSubmitting(true)
 
+      console.log('TAG trước submit:', formData.tag)
       const submitData = {
         name: formData.name,
         quantity: product ? parseFloat(formData.quantity) : 0,
         unit: formData.unit,
         description: formData.description,
-        tags: formData.tag ? [formData.tag] : [] // always array for backend
+        tag: Array.isArray(formData.tag) ? formData.tag.map(t => t._id) : []
       }
+      console.log('submitData:', submitData)
 
       if (product) {
         try {
@@ -205,30 +199,91 @@ const ProductForm = ({ product, onSubmit, onClose, allProducts = [] }) => {
         </Combobox>
       </div>
 
-      {/* Tag (Combobox) */}
+      {/* TAG
       <div className="space-y-2">
-        <Label htmlFor="tag">Tag</Label>
+        <Label>Tag</Label>
         <Combobox
           items={allTags}
           value={formData.tag}
-          onValueChange={tagId => setFormData(prev => ({ ...prev, tag: tagId }))}
-          itemToStringValue={t => t?.name || ''}
+          onValueChange={tagObj => setFormData(prev => ({ ...prev, tag: tagObj }))}
+          itemToStringValue={tag => tag?.name || ''}
           disabled={loadingTags}
         >
-          <ComboboxInput placeholder="Chọn tag..." />
+<ComboboxChips
+  value={formData.tag || []}
+  onValueChange={(val) =>
+    setFormData({ ...formData, tag: val })
+  }
+>
+  <ComboboxValue>
+    {(values) => (
+      <>
+        {(values || []).map((tag) => (
+          <ComboboxChip key={tag._id || tag.value}>
+            {tag.name || tag.label}
+          </ComboboxChip>
+                  ))}
+                  <ComboboxChipsInput placeholder="Chọn tag" 
+                  value={formData.tag?.name || ''}/>
+                </>
+              )}
+            </ComboboxValue>
+          </ComboboxChips>
           <ComboboxContent>
             <ComboboxEmpty>Không có tag.</ComboboxEmpty>
             <ComboboxList>
               {(tag) => (
-                <ComboboxItem key={tag._id} value={tag._id}>
+                <ComboboxItem key={tag._id} value={tag}>
                   {tag.name}
-                  {tag.description && <span className="text-xs text-muted-foreground ml-2">- {tag.description}</span>}
                 </ComboboxItem>
               )}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
-      </div>
+      </div> */}
+      <div className="space-y-2">
+  <Label>Tag</Label>
+
+  <Combobox
+    items={allTags}
+    value={formData.tag}
+    onValueChange={(tags) =>
+      setFormData((prev) => ({ ...prev, tag: tags }))
+    }
+    itemToStringValue={(tag) => tag?.name || ""}
+    multiple
+    disabled={loadingTags}
+  >
+    <ComboboxChips>
+      <ComboboxValue>
+        {(values) => {
+          const arr = Array.isArray(values) ? values : [];
+          return (
+            <>
+              {arr.map((tag) => (
+                <ComboboxChip key={tag._id}>
+                  {tag.name}
+                </ComboboxChip>
+              ))}
+              <ComboboxChipsInput placeholder="Chọn tag" />
+            </>
+          );
+        }}
+      </ComboboxValue>
+    </ComboboxChips>
+
+    <ComboboxContent>
+      <ComboboxEmpty>Không có tag.</ComboboxEmpty>
+      <ComboboxList>
+        {allTags.map((tag) => (
+          <ComboboxItem key={tag._id} value={tag}>
+            {tag.name}
+          </ComboboxItem>
+        ))}
+      </ComboboxList>
+    </ComboboxContent>
+  </Combobox>
+</div>
 
       {/* Description */}
       <div className="space-y-2">
@@ -252,5 +307,4 @@ const ProductForm = ({ product, onSubmit, onClose, allProducts = [] }) => {
     </form>
   )
 }
-
 export default ProductForm
