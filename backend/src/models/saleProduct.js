@@ -31,11 +31,11 @@ const saleProductSchema = new mongoose.Schema(
       default: 1,
       min: [0, 'Số lượng không được âm']
     },
-    tag: {
+      tags: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Tag',
       default: null
-    }, 
+    }], 
     items: {
       type: [
         {

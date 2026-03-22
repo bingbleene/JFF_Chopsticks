@@ -10,7 +10,7 @@ export const getAllSaleProducts = async (req, res) => {
     const saleProducts = await SaleProduct
       .find(query)
       .populate("items.productId", "name quantity unit")
-      .populate("tag", "name")
+      .populate("tags", "name")
       .sort({ createdAt: -1 })
     res.status(200).json(saleProducts)
   } catch (error) {
@@ -23,7 +23,7 @@ export const getSaleProduct = async (req, res) => {
   try {
     const saleProduct = await SaleProduct.findById(req.params.id)
       .populate("items.productId", "name quantity unit")
-      .populate("tag", "name")
+      .populate("tags", "name")
     if (!saleProduct) {
       return res.status(404).json({ message: 'Sản phẩm bán không tồn tại' })
     }
@@ -76,7 +76,7 @@ export const buildItemsWithImportPrice = async (items) => {
 
 export const createSaleProduct = async (req, res) => {
   try {
-    const { name, description, price, items, saleType, tag, quantity } = req.body;
+    const { name, description, price, items, saleType, tags, quantity } = req.body;
 
     // 🔥 Validate
     if (!name || price === undefined || !items || items.length === 0 || !saleType) {
@@ -150,7 +150,7 @@ export const createSaleProduct = async (req, res) => {
           price,
           items: result.data,
           saleType,
-          tag: tag || null,
+          tags: Array.isArray(tags) ? tags : [],
           quantity: quantity || 1
         });
 
@@ -175,7 +175,8 @@ export const createSaleProduct = async (req, res) => {
     }
 
     const populatedProduct = await SaleProduct.findById(newSaleProduct._id)
-      .populate("items.productId", "name quantity unit");
+      .populate("items.productId", "name quantity unit")
+      .populate("tags", "name");
 
     res.status(201).json(populatedProduct);
 
@@ -225,7 +226,7 @@ export const updateSaleProduct = async (req, res) => {
       'description',
       'price',
       'saleType',
-      'tag',
+      'tags',
       'quantity'
     ];
 

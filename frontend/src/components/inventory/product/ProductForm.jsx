@@ -5,8 +5,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
-
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty, ComboboxChip, ComboboxChips, ComboboxValue, ComboboxChipsInput } from '@/components/ui/combobox'
 import { productUnits } from '@/lib/data'
 import api from '@/lib/axios'
@@ -119,8 +117,6 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
 
     try {
       setIsSubmitting(true)
-
-      console.log('TAG trước submit:', formData.tag)
       const submitData = {
         name: formData.name,
         quantity: product ? parseFloat(formData.quantity) : 0,
@@ -128,8 +124,6 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
         description: formData.description,
         tag: Array.isArray(formData.tag) ? formData.tag.map(t => t._id) : []
       }
-      console.log('submitData:', submitData)
-
       if (product) {
         try {
           const res = await api.put(`/products/${product._id || product.id}`, submitData)
@@ -199,91 +193,49 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
         </Combobox>
       </div>
 
-      {/* TAG
+      {/* TAG */}
       <div className="space-y-2">
         <Label>Tag</Label>
         <Combobox
           items={allTags}
           value={formData.tag}
-          onValueChange={tagObj => setFormData(prev => ({ ...prev, tag: tagObj }))}
-          itemToStringValue={tag => tag?.name || ''}
+          onValueChange={(tags) =>
+            setFormData((prev) => ({ ...prev, tag: tags }))
+          }
+          itemToStringValue={(tag) => tag?.name || ""}
+          multiple
           disabled={loadingTags}
         >
-<ComboboxChips
-  value={formData.tag || []}
-  onValueChange={(val) =>
-    setFormData({ ...formData, tag: val })
-  }
->
-  <ComboboxValue>
-    {(values) => (
-      <>
-        {(values || []).map((tag) => (
-          <ComboboxChip key={tag._id || tag.value}>
-            {tag.name || tag.label}
-          </ComboboxChip>
-                  ))}
-                  <ComboboxChipsInput placeholder="Chọn tag" 
-                  value={formData.tag?.name || ''}/>
-                </>
-              )}
+          <ComboboxChips>
+            <ComboboxValue>
+              {(values) => {
+                const arr = Array.isArray(values) ? values : [];
+                return (
+                  <>
+                    {arr.map((tag) => (
+                      <ComboboxChip key={tag._id}>
+                        {tag.name}
+                      </ComboboxChip>
+                    ))}
+                    <ComboboxChipsInput placeholder="Chọn tag" />
+                  </>
+                );
+              }}
             </ComboboxValue>
           </ComboboxChips>
+
           <ComboboxContent>
             <ComboboxEmpty>Không có tag.</ComboboxEmpty>
             <ComboboxList>
-              {(tag) => (
+              {allTags.map((tag) => (
                 <ComboboxItem key={tag._id} value={tag}>
                   {tag.name}
                 </ComboboxItem>
-              )}
+              ))}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
-      </div> */}
-      <div className="space-y-2">
-  <Label>Tag</Label>
-
-  <Combobox
-    items={allTags}
-    value={formData.tag}
-    onValueChange={(tags) =>
-      setFormData((prev) => ({ ...prev, tag: tags }))
-    }
-    itemToStringValue={(tag) => tag?.name || ""}
-    multiple
-    disabled={loadingTags}
-  >
-    <ComboboxChips>
-      <ComboboxValue>
-        {(values) => {
-          const arr = Array.isArray(values) ? values : [];
-          return (
-            <>
-              {arr.map((tag) => (
-                <ComboboxChip key={tag._id}>
-                  {tag.name}
-                </ComboboxChip>
-              ))}
-              <ComboboxChipsInput placeholder="Chọn tag" />
-            </>
-          );
-        }}
-      </ComboboxValue>
-    </ComboboxChips>
-
-    <ComboboxContent>
-      <ComboboxEmpty>Không có tag.</ComboboxEmpty>
-      <ComboboxList>
-        {allTags.map((tag) => (
-          <ComboboxItem key={tag._id} value={tag}>
-            {tag.name}
-          </ComboboxItem>
-        ))}
-      </ComboboxList>
-    </ComboboxContent>
-  </Combobox>
-</div>
+      </div>
 
       {/* Description */}
       <div className="space-y-2">

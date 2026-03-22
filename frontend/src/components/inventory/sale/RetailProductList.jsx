@@ -2,7 +2,14 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, MoreHorizontal as MoreHorizontalIcon } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 const RetailProductList = ({
   products = [],
@@ -51,14 +58,23 @@ const RetailProductList = ({
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
                     SL: {product.quantity}
                   </span>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
-                      <Edit2 size={16} />
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteSaleProduct(product)}>
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8">
+                        <MoreHorizontalIcon />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditProduct(product)}>
+                        <Edit2 size={16} className="mr-2" /> Sửa
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleDeleteSaleProduct(product)} variant="destructive">
+                        <Trash2 size={16} className="mr-2" /> Xóa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             )
