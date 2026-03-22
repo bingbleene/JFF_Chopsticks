@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -308,9 +308,10 @@ const ImportForm = ({ importData, onSubmit, onClose }) => {
             <Button
               type="button"
               variant="ghost"
+              size="icon"
               onClick={() => handleRemoveItem(idx)}
             >
-              xóa
+              <Trash2 size={16} />
             </Button>
           </div>
         ))}

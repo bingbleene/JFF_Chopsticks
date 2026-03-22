@@ -12,11 +12,16 @@ import {
   ComboboxList,
   ComboboxItem,
   ComboboxEmpty,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxValue,
+  ComboboxChipsInput
 } from '@/components/ui/combobox'
 import { DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import api from '@/lib/axios'
 import { validateRequired, validateNumber } from '@/lib/helpers'
+import { formatCurrency } from '@/lib/hooks'
 
 const SaleProductForm = ({
   saleProduct,
@@ -25,6 +30,38 @@ const SaleProductForm = ({
   onSubmit,
   onClose
 }) => {
+
+  // Reset formData khi mở form sửa sản phẩm
+  useEffect(() => {
+    if (saleProduct) {
+      setFormData({
+        name: saleProduct.name || '',
+        description: saleProduct.description || '',
+        saleType: saleProduct.saleType || 'retail',
+        price: saleProduct.price || '',
+        quantity: saleProduct.quantity || '',
+        tags: Array.isArray(saleProduct.tags)
+          ? saleProduct.tags.map(t => (typeof t === 'object' && t !== null ? t._id : t))
+          : (saleProduct.tag ? [saleProduct.tag] : []),
+        items: saleProduct.items
+          ? saleProduct.items.map(item => ({
+              productId: item.productId?._id || item.productId || '',
+              quantity: item.quantity || 1
+            }))
+          : []
+      });
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        saleType: saleType,
+        price: '',
+        quantity: '',
+        tags: [],
+        items: saleType === 'retail' ? [{ productId: '', quantity: 1 }] : []
+      });
+    }
+  }, [saleProduct, saleType]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -164,6 +201,7 @@ const SaleProductForm = ({
 
 
   const handleSubmit = async (e) => {
+  e.preventDefault();
 
     if (!validateForm()) {
       toast.error('Vui lòng kiểm tra lại thông tin')
@@ -186,18 +224,22 @@ const SaleProductForm = ({
         }))
       }
 
+      console.log('[SaleProductForm] Submit data:', submitData)
+
       if (saleProduct) {
         const res = await api.put(`/sale-products/${saleProduct._id || saleProduct.id}`, submitData)
+        console.log('[SaleProductForm] API PUT response:', res)
         onSubmit(res.data)
         toast.success('Cập nhật thành công')
       } else {
         const res = await api.post('/sale-products', submitData)
+        console.log('[SaleProductForm] API POST response:', res)
         onSubmit(res.data)
         toast.success('Thêm thành công')
       }
       onClose()
     } catch (error) {
-      console.error('Lỗi:', error)
+      console.error('[SaleProductForm] Lỗi khi gọi API:', error)
       const errorMsg = error.response?.data?.message || 'Lỗi khi lưu sản phẩm'
       toast.error(errorMsg)
     } finally {
@@ -235,16 +277,28 @@ const SaleProductForm = ({
         {/* Giá bán */}
         <div className="flex-1 space-y-2">
           <Label htmlFor="price">Giá bán (VND) *</Label>
-          <Input
-            id="price"
-            name="price"
-            type="number"
-            value={formData.price}
-            onChange={handleChange}
-            placeholder="0"
-            min="0"
-            className={errors.price ? 'border-destructive' : ''}
-          />
+          <div className="relative">
+            <Input
+              id="price"
+              name="price"
+              type="text"
+              inputMode="numeric"
+              value={
+                formData.price === '' ? '' : Number(formData.price).toLocaleString('vi-VN')
+              }
+              onChange={e => {
+                // Remove all non-digit chars
+                const raw = e.target.value.replace(/[^\d]/g, '')
+                setFormData(prev => ({ ...prev, price: raw }))
+                if (errors.price) setErrors(prev => ({ ...prev, price: '' }))
+              }}
+              placeholder="0"
+              min="0"
+              className={errors.price ? 'border-destructive' : ''}
+              autoComplete="off"
+            />
+            {/* Optional: show ₫ icon or currency */}
+          </div>
           {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
         </div>
         {/* Số lượng */}
@@ -276,7 +330,13 @@ const SaleProductForm = ({
             onValueChange={val => setFormData(prev => ({ ...prev, items: [{ productId: val ? (val._id || val.id) : '', quantity: 1 }] }))}
             itemToStringValue={p => p?.name || ''}
           >
-            <ComboboxInput placeholder="Chọn sản phẩm gốc..." />
+            <ComboboxInput
+              placeholder="Chọn sản phẩm gốc"
+              value={
+                products.find(p => (p._id === formData.items[0]?.productId || p.id === formData.items[0]?.productId))?.name || ''
+              }
+              readOnly
+            />
             <ComboboxContent className="w-[--radix-popover-trigger-width] max-h-60 overflow-y-auto">
               <ComboboxEmpty>Không có sản phẩm.</ComboboxEmpty>
               <ComboboxList>
@@ -309,7 +369,11 @@ const SaleProductForm = ({
                       onValueChange={val => handleItemChange(index, 'productId', val ? (val._id || val.id) : '')}
                       itemToStringValue={p => p?.name || ''}
                     >
-                      <ComboboxInput placeholder="Chọn sản phẩm" />
+                      <ComboboxInput
+                        placeholder="Chọn sản phẩm"
+                        value={products.find(p => (p._id === item.productId || p.id === item.productId))?.name || ''}
+                        readOnly
+                      />
                       <ComboboxContent>
                         <ComboboxEmpty>Không có sản phẩm.</ComboboxEmpty>
                         <ComboboxList>
@@ -356,28 +420,45 @@ const SaleProductForm = ({
         )}
       </div>
 
-      {/* Tag */}
+      {/* TAG */}
       <div className="space-y-2">
         <Label>Tag</Label>
         <Combobox
           items={allTags}
-          value={allTags.find(tag => tag._id === formData.tags[0]) || null}
-          onValueChange={tagObj => setFormData(prev => ({ ...prev, tags: tagObj?._id ? [tagObj._id] : [] }))}
-          itemToStringValue={tag => tag?.name || ''}
+          value={allTags.filter(tag => formData.tags.includes(tag._id))}
+          onValueChange={(selectedTags) =>
+            setFormData((prev) => ({ ...prev, tags: selectedTags.map(tag => tag._id) }))
+          }
+          itemToStringValue={(tag) => tag?.name || ""}
+          multiple
           disabled={loadingTags}
         >
-          <ComboboxInput
-            placeholder="Chọn tag"
-            value={allTags.find(tag => tag._id === formData.tags[0])?.name || ''}
-          />
+          <ComboboxChips>
+            <ComboboxValue>
+              {(values) => {
+                const arr = Array.isArray(values) ? values : [];
+                return (
+                  <>
+                    {arr.map((tag) => (
+                      <ComboboxChip key={tag._id}>
+                        {tag.name}
+                      </ComboboxChip>
+                    ))}
+                    <ComboboxChipsInput placeholder="Chọn tag" />
+                  </>
+                );
+              }}
+            </ComboboxValue>
+          </ComboboxChips>
+
           <ComboboxContent>
             <ComboboxEmpty>Không có tag.</ComboboxEmpty>
             <ComboboxList>
-              {(tag) => (
+              {allTags.map((tag) => (
                 <ComboboxItem key={tag._id} value={tag}>
                   {tag.name}
                 </ComboboxItem>
-              )}
+              ))}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>

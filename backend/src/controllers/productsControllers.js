@@ -92,8 +92,6 @@ export const getProductWithImport = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    console.log('REQ BODY:', req.body)
-    console.log('TAG:', req.body.tag)
     const { name, quantity, unit, description, tag } = req.body
 
     if (!name || !Array.isArray(tag) || tag.length === 0) {
