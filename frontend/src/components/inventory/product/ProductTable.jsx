@@ -38,7 +38,7 @@ const ProductTable = ({
           {products.map((product, idx) => (
             <TableRow key={product._id || product.id}>
               <TableCell>{(page - 1) * pageSize + idx + 1}</TableCell>
-              <TableCell className="flex flex-wrap gap-1">{product.productIndex || product.code || product.productCode || '-'}</TableCell>
+              <TableCell className="font-mono font-medium flex flex-wrap gap-1">{product.productIndex || product.code || product.productCode || '-'}</TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell className="font-medium">
                 {getProductTags(product).length > 0 ? (
