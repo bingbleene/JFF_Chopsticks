@@ -42,7 +42,7 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
               <TableCell>
                 {(page - 1) * pageSize + idx + 1}
               </TableCell>
-              <TableCell className="flex flex-wrap gap-1">{imp.importIndex}</TableCell>
+              <TableCell className="font-mono font-medium flex flex-wrap gap-1">{imp.importIndex}</TableCell>
               <TableCell className="font-medium">{imp.dateImported ? format(new Date(imp.dateImported), 'dd/MM/yyyy') : '-'}</TableCell>
               <TableCell className="font-medium">{imp.staff?.name || '-'}</TableCell>
               <TableCell className="font-medium">{imp.tag?.name || '-'}</TableCell>
@@ -107,6 +107,7 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
                           <TableHead className="px-3 py-2 font-semibold text-center">Đơn vị</TableHead>
                           <TableHead className="px-3 py-2 font-semibold text-center">Số lượng</TableHead>
                           <TableHead className="px-3 py-2 font-semibold text-center">Giá nhập</TableHead>
+                          <TableHead className="px-3 py-2 font-semibold text-center">Thành tiền</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -117,13 +118,14 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
                             <TableCell className="px-3 py-2 text-center">{item.importItemId?.unit || '-'}</TableCell>
                             <TableCell className="px-3 py-2 text-center">{item.quantity}</TableCell>
                             <TableCell className="px-3 py-2 text-center text-green-700 font-medium">{item.price.toLocaleString('vi-VN')}₫</TableCell>
+                            <TableCell className="px-3 py-2 text-center font-semibold">{(item.price * item.quantity).toLocaleString('vi-VN')}₫</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
                   {/* Totals */}
-                  <div className="flex flex-wrap gap-4 mt-4 text-sm font-medium justify-start">
+                  <div className="flex flex-wrap gap-4 mt-4 text-sm font-medium justify-end">
                     <div className="bg-gray-100 rounded px-3 py-2">
                       Tổng số sản phẩm: <span className="text-primary font-semibold">{imp.items.length}</span>
                     </div>
