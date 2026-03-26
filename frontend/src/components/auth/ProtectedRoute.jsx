@@ -1,50 +1,44 @@
-import { useAuthStore } from '@/stores/useAuthStore'
-import React, { use, useEffect, useState } from 'react'
-import { Navigate, Outlet } from 'react-router-dom';
-import { set } from 'zod';
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useEffect, useState } from "react";
+import { Navigate, Outlet } from "react-router";
 
 const ProtectedRoute = () => {
-    const {accessToken, user,  loading, refresh, fetchMe} = useAuthStore();
-    const [starting, setStarting] = useState(true);
+  const { loading, refresh, fetchMe } = useAuthStore();
+  const [starting, setStarting] = useState(true);
 
+  useEffect(() => {
     const init = async () => {
       try {
-        if (!accessToken) {
-          await refresh();
-        }
+        await refresh(); // luôn gọi
+
+        const { accessToken, user } = useAuthStore.getState();
+
         if (accessToken && !user) {
           await fetchMe();
         }
       } catch (e) {
-        // log lỗi nếu có
         console.error(e);
       } finally {
         setStarting(false);
       }
-    }
+    };
 
-    useEffect(() => {
-      init();
-    }, []);
-    
-    if (starting || loading) {
-      return (
-        <div className="flex h-screen items-center justify-center">Loading...</div>
-      );
-    }
+    init();
+  }, []);
 
-    if (!accessToken) {
-        return (
-            <Navigate 
-            to="/signin" 
-            replace
-            />
-        )
-    }
+  if (starting || loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Đang tải trang...
+      </div>
+    );
+  }
 
-  return (
-    <Outlet />
-  )
-}
+  if (!useAuthStore.getState().accessToken) {
+    return <Navigate to="/signin" replace />;
+  }
 
-export default ProtectedRoute
+  return <Outlet />;
+};
+
+export default ProtectedRoute;
