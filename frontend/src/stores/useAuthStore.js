@@ -4,13 +4,8 @@ import { toast } from 'sonner'
 import { authService } from '@/services/authService'
 
 
-
-const getInitialAccessToken = () => {
-    return localStorage.getItem('accessToken') || null;
-};
-
 export const useAuthStore = create((set, get) => ({
-    accessToken: getInitialAccessToken(),
+    accessToken: null,
     user: null,
     loading: false,
 
