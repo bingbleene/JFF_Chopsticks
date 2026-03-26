@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { authService } from '@/services/authService'
 
 
+
 const getInitialAccessToken = () => {
     return localStorage.getItem('accessToken') || null;
 };
@@ -12,6 +13,10 @@ export const useAuthStore = create((set, get) => ({
     accessToken: getInitialAccessToken(),
     user: null,
     loading: false,
+
+    setAccessToken: (accessToken) => {
+        set({ accessToken });
+    },
 
     clearState: () => {
         localStorage.removeItem('accessToken');
@@ -22,9 +27,8 @@ export const useAuthStore = create((set, get) => ({
     signIn: async (username, password) => {
         try {
             set({ loading: true })
-            const { accessToken, user } = await authService.signIn(username, password)
-            localStorage.setItem('accessToken', accessToken)
-            set({ accessToken, user })
+            const { accessToken, user } = await authService.signIn(username, password);
+            get().setAccessToken(accessToken);
 
             await get().fetchMe();
             
@@ -61,6 +65,26 @@ export const useAuthStore = create((set, get) => ({
             toast.error('Lỗi xảy ra khi lấy dữ liệu người dùng.')
         } finally {
             set({ loading: false })
+        }
+    },
+
+    refresh: async () => {
+        try {
+            set({ loading: true });
+            const { user, fetchMe, setAccessToken} = get();
+            const accessToken = await authService.refresh();
+
+            setAccessToken(accessToken);
+
+            if (!user) {
+                await fetchMe();
+            }
+        } catch (error) {
+            console.error('Lỗi khi làmi mới token:', error)
+            toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+            get().clearState();
+        } finally {
+            set({ loading: false });
         }
     }
 }))
