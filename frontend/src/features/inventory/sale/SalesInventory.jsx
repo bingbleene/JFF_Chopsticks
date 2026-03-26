@@ -1,18 +1,16 @@
+import api from '@/lib/axios'
 import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { formatCurrency } from '@/lib/utils';
-import SearchBox from '@/components/SearchBox';
-import api from '@/lib/axios'
+import { formatCurrency } from '@/utils/utils';
 import { toast } from 'sonner'
-import LoadingItem from '@/components/LoadingItem'
 import SaleProductForm from './SaleProductForm'
 import SaleProductTable from './SaleProductTable';
 import RetailProductList from './RetailProductList';
 import ComboProductList from './ComboProductList';
 
 const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) => {
-    const [allTags, setAllTags] = useState([])
-    const [loadingTags, setLoadingTags] = useState(false)
+  const [allTags, setAllTags] = useState([])
+  const [loadingTags, setLoadingTags] = useState(false)
   const [saleProducts, setSaleProducts] = useState([])
   const [products, setProducts] = useState([])
   const [filteredSaleProducts, setFilteredSaleProducts] = useState([])
@@ -41,25 +39,14 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
   const fetchData = async () => {
     try {
       setIsLoading(true)
+      // Sử dụng API mới trả về đầy đủ importPrice và usedInSaleProduct
       const [productsRes, saleProductsRes] = await Promise.all([
-        api.get('/products'),
+        api.get('/products/with-import'),
         api.get('/sale-products')
       ])
 
-      const productsListRaw = Array.isArray(productsRes.data) ? productsRes.data : (productsRes.data.products || [])
-      // Lấy importPrice cho từng sản phẩm
-      const productsList = await Promise.all(
-        productsListRaw.map(async (p) => {
-          try {
-            const res = await api.get(`/products/${p._id || p.id}/with-import`)
-            return res.data
-          } catch (err) {
-            // Nếu lỗi thì trả về sản phẩm gốc không có importPrice
-            return p
-          }
-        })
-      )
-
+      // API mới trả về mảng products trực tiếp
+      const productsList = Array.isArray(productsRes.data) ? productsRes.data : (productsRes.data.products || [])
       const saleList = Array.isArray(saleProductsRes.data) ? saleProductsRes.data : (saleProductsRes.data.saleProducts || [])
 
       setProducts(productsList)
@@ -244,6 +231,7 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
             allSaleProducts={saleProducts}
             onSubmit={editingProduct ? handleUpdateSaleProduct : handleAddSaleProduct}
             onClose={handleFormClose}
+            reloadProducts={fetchData}
           />
         </DialogContent>
       </Dialog>

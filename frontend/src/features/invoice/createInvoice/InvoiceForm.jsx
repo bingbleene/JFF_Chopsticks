@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import api from '@/lib/axios'
 import { toast } from 'sonner'
 import { paymentMethods, getPaymentMethodLabel } from '@/lib/data'
-import { formatCurrency, validateProductStock, getTotalProductInCart } from '@/lib/utils';
+import { formatCurrency } from '@/utils/utils';
+import { cartValidate } from '@/utils/cartValidate';
 
 
 const InvoiceForm = ({ onSuccess }) => {
@@ -21,9 +22,6 @@ const InvoiceForm = ({ onSuccess }) => {
   // Cart states
   const [cartItems, setCartItems] = useState([])
   const [selectedVouchers, setSelectedVouchers] = useState([])
-
-
-
 
   // Form states
   const [staff, setStaff] = useState('')
@@ -38,12 +36,9 @@ const InvoiceForm = ({ onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
-
-
   useEffect(() => {
     fetchData()
     fetchStaff()
-    // Gắn hàm reloadInvoiceProducts vào window để ProductSelection gọi lại được
     window.reloadInvoiceProducts = fetchData;
     return () => {
       delete window.reloadInvoiceProducts;
@@ -56,7 +51,7 @@ const InvoiceForm = ({ onSuccess }) => {
       const [saleProductsRes, vouchersRes, productsRes] = await Promise.all([
         api.get('/sale-products'),
         api.get('/vouchers'),
-        api.get('/products')
+        api.get('/products/with-import')
       ])
 
       const saleList = Array.isArray(saleProductsRes.data) ? saleProductsRes.data : []
@@ -83,13 +78,9 @@ const InvoiceForm = ({ onSuccess }) => {
     }
   }
 
-  // Filter products by search
   const filteredProducts = saleProducts.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  // Add product to cart
-  // Chuẩn hóa productsInStock: { [productId]: quantity }
   const productsInStock = React.useMemo(() => {
     const stock = {};
     products.forEach(p => {
@@ -99,72 +90,49 @@ const InvoiceForm = ({ onSuccess }) => {
   }, [products]);
 
   const addToCart = (product) => {
-    // Kiểm tra tồn kho thực tế cho từng productId (bao gồm combo)
-    // Lấy tất cả productId liên quan
-    let productIds = [];
-    if (product.saleType === 'retail') {
-      productIds = [product.saleItemId || product._id || product.id];
-    } else if (product.saleType === 'combo' && Array.isArray(product.items)) {
-      productIds = product.items.map(i => i.productId);
+    const existingItem = cartItems.find(item => item.saleItemId === (product._id || product.id));
+    const newCart = existingItem
+      ? cartItems.map(item =>
+          item.saleItemId === (product._id || product.id)
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      : [
+          ...cartItems,
+          {
+            saleItemId: product._id || product.id,
+            name: product.name,
+            price: product.price,
+            saleType: product.saleType,
+            maxQuantity: product.quantity,
+            quantity: 1,
+            items: product.items // cần cho combo
+          },
+        ];
+    const validateResult = cartValidate(newCart, saleProducts);
+    if (!validateResult.valid) {
+      toast.warning(validateResult.message || 'Vượt quá số lượng còn lại để bán!');
+      return;
     }
-    // Kiểm tra từng productId
-    for (const pid of productIds) {
-      if (!validateProductStock([...cartItems, { ...product, quantity: (cartItems.find(i => i.saleItemId === (product._id || product.id))?.quantity || 0) + 1 }], pid, productsInStock)) {
-        toast.warning('Vượt quá tồn kho sản phẩm!');
-        return;
-      }
-    }
-
-    const existingItem = cartItems.find(item => item.saleItemId === (product._id || product.id))
-    if (existingItem) {
-      setCartItems(cartItems.map(item =>
-        item.saleItemId === (product._id || product.id)
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ))
-    } else {
-      setCartItems([...cartItems, {
-        saleItemId: product._id || product.id,
-        name: product.name,
-        price: product.price,
-        saleType: product.saleType,
-        maxQuantity: product.quantity,
-        quantity: 1,
-        items: product.items // cần cho combo
-      }])
-    }
-    toast.success(`Đã thêm ${product.name}`)
-  }
+    setCartItems(newCart);
+    toast.success(`Đã thêm ${product.name}`);
+  };
 
   const updateQuantity = (saleItemId, newQuantity) => {
     if (newQuantity <= 0) {
-      removeFromCart(saleItemId)
-      return
+      removeFromCart(saleItemId);
+      return;
     }
-
-    const item = cartItems.find(i => i.saleItemId === saleItemId)
-    // Kiểm tra tồn kho thực tế cho từng productId (bao gồm combo)
-    let productIds = [];
-    if (item.saleType === 'retail') {
-      productIds = [item.saleItemId];
-    } else if (item.saleType === 'combo' && Array.isArray(item.items)) {
-      productIds = item.items.map(i => i.productId);
-    }
-    for (const pid of productIds) {
-      // Tạo cartItems giả lập với số lượng mới
-      const newCart = cartItems.map(i =>
-        i.saleItemId === saleItemId ? { ...i, quantity: newQuantity } : i
-      );
-      if (!validateProductStock(newCart, pid, productsInStock)) {
-        toast.warning('Vượt quá tồn kho sản phẩm!');
-        return;
-      }
-    }
-
-    setCartItems(cartItems.map(i =>
+    const newCart = cartItems.map(i =>
       i.saleItemId === saleItemId ? { ...i, quantity: newQuantity } : i
-    ))
-  }
+    );
+    const validateResult = cartValidate(newCart, saleProducts);
+    if (!validateResult.valid) {
+      toast.warning(validateResult.message || 'Vượt quá số lượng còn lại để bán!');
+      return;
+    }
+    setCartItems(newCart);
+  };
   const removeFromCart = (saleItemId) => {
     setCartItems(cartItems.filter(i => i.saleItemId !== saleItemId))
   }
@@ -215,8 +183,6 @@ const InvoiceForm = ({ onSuccess }) => {
   }
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  // Tính tổng giảm giá từ voucher theo type/value
-  // Chỉ cho phép 1 voucher 'original_price' trên 1 hóa đơn
   let hasOriginalPriceVoucher = false;
   const voucherDiscount = selectedVouchers.reduce((sum, v) => {
     const voucher = vouchers.find(vc => (vc._id || vc.id) === v.voucherId)

@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty, ComboboxChip, ComboboxChips, ComboboxValue, ComboboxChipsInput } from '@/components/ui/combobox'
 import { productUnits } from '@/lib/data'
 import { useTags, normalizeTags } from '@/lib/hooks'
+import { validateRequired } from '@/lib/helpers'
+import api from '@/lib/axios'
 
 const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
   const [formData, setFormData] = useState({
@@ -106,9 +108,9 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
           onSubmit(res.data)
           toast.success('Cập nhật sản phẩm thành công')
         } catch (error) {
-          const errorMsg = error.response?.data?.message || 'Lỗi khi cập nhật sản phẩm'
+          const errorMsg = error.response?.data?.message || error.message || 'Lỗi khi cập nhật sản phẩm';
           toast.error(errorMsg)
-          console.error('Lỗi khi cập nhật:', error.response?.data)
+          console.error('Lỗi khi cập nhật:', error)
         }
       } else {
         try {
@@ -116,9 +118,9 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
           onSubmit(res.data)
           toast.success('Thêm sản phẩm thành công')
         } catch (error) {
-          const errorMsg = error.response?.data?.message || 'Lỗi khi thêm sản phẩm'
+          const errorMsg = error.response?.data?.message || error.message || 'Lỗi khi thêm sản phẩm';
           toast.error(errorMsg)
-          console.error('Lỗi khi thêm:', error.response?.data)
+          console.error('Lỗi khi thêm:', error)
           return
         }
       }
@@ -129,6 +131,24 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
       setIsSubmitting(false)
     }
   }
+
+  // So sánh formData với product để biết form có thay đổi không
+  const isFormChanged = () => {
+    if (!product) return true;
+    if (
+      formData.name !== (product.name || '') ||
+      String(formData.quantity) !== String(product.quantity ?? 0) ||
+      formData.unit !== (product.unit || 'cái') ||
+      formData.description !== (product.description || '')
+    ) return true;
+    // So sánh tag (array)
+    const tags1 = Array.isArray(formData.tag) ? formData.tag.map(t => t._id || t).sort() : [];
+    const tags2 = Array.isArray(product.tag)
+      ? product.tag.map(t => t._id || t).sort()
+      : (product.tag ? [product.tag._id || product.tag] : []);
+    if (tags1.join(',') !== tags2.join(',')) return true;
+    return false;
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -228,7 +248,10 @@ const ProductForm = ({ product, allProducts = [], onSubmit = () => {} }) => {
 
       {/* Actions */}
       <DialogFooter>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || (product && !isFormChanged())}
+        >
           {isSubmitting ? 'Đang lưu...' : (product ? 'Cập nhật' : 'Thêm')}
         </Button>
       </DialogFooter>

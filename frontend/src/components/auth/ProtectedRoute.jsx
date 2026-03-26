@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router";
+import { SpinnerEmpty } from "@/components/ui/SpinnerEmpty";
 
 const ProtectedRoute = () => {
   const { loading, refresh, fetchMe } = useAuthStore();
@@ -27,11 +28,7 @@ const ProtectedRoute = () => {
   }, []);
 
   if (starting || loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Đang tải trang...
-      </div>
-    );
+    return <SpinnerEmpty />;
   }
 
   if (!useAuthStore.getState().accessToken) {

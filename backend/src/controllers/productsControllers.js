@@ -23,6 +23,33 @@ export const getAllProductWithImport = async (req, res) => {
     .sort({ createdAt: -1 })
     .populate('tag', 'name')
 
+    // Lấy toàn bộ saleProduct (retail + combo)
+    const SaleProduct = mongoose.model('SaleProduct');
+    const allSaleProducts = await SaleProduct.find();
+
+    // Hàm tính tổng đã dùng trong saleProduct
+    function getTotalUsedInSaleProduct(saleProducts, productId) {
+      let total = 0;
+      for (const sp of saleProducts) {
+        if (sp.saleType === 'retail') {
+          if (
+            sp.productId?.toString() === productId.toString() ||
+            sp.saleItemId?.toString() === productId.toString() ||
+            (sp.items && sp.items[0] && (sp.items[0].productId?.toString() === productId.toString() || sp.items[0].productId?._id?.toString() === productId.toString()))
+          ) {
+            total += Number(sp.quantity) || 0;
+          }
+        } else if (sp.saleType === 'combo' && Array.isArray(sp.items)) {
+          for (const item of sp.items) {
+            if (item.productId?.toString() === productId.toString() || item.productId?._id?.toString() === productId.toString()) {
+              total += (Number(item.quantity) || 0) * (Number(sp.quantity) || 0);
+            }
+          }
+        }
+      }
+      return total;
+    }
+
     const productsWithImportPrice = await Promise.all(products.map(async (product) => {
       const lastImport = await Import.findOne({
         status: 'active',
@@ -35,9 +62,12 @@ export const getAllProductWithImport = async (req, res) => {
         const item = lastImport.items.find(i => i.importItemId.toString() === product._id.toString())
         if (item) importPrice = item.price
       }
+      // Tính tổng đã dùng trong saleProduct
+      const usedInSaleProduct = getTotalUsedInSaleProduct(allSaleProducts, product._id);
       return {
         ...product.toObject(),
-        importPrice
+        importPrice,
+        usedInSaleProduct
       }
     }))
     res.status(200).json(productsWithImportPrice)
@@ -66,10 +96,10 @@ export const getProduct = async (req, res) => {
 export const getProductWithImport = async (req, res) => {
   try {
     const product = await Product
-    .findById(req.params.id)
-    .populate('tag', 'name')
+      .findById(req.params.id)
+      .populate('tag', 'name');
     if (!product) {
-      return res.status(404).json({ message: 'Sản phẩm không tồn tại' })
+      return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
     }
     // Lấy importPrice từ phiếu nhập gần nhất
     const lastImport = await Import.findOne({
@@ -77,16 +107,41 @@ export const getProductWithImport = async (req, res) => {
       'items.importItemId': product._id
     })
       .sort({ dateImported: -1 })
-      .lean()
-    let importPrice = null
+      .lean();
+    let importPrice = null;
     if (lastImport) {
-      const item = lastImport.items.find(i => i.importItemId.toString() === product._id.toString())
-      if (item) importPrice = item.price
+      const item = lastImport.items.find(i => i.importItemId.toString() === product._id.toString());
+      if (item) importPrice = item.price;
     }
-    res.status(200).json({ ...product.toObject(), importPrice })
+    // Lấy tổng đã dùng trong saleProduct
+    const SaleProduct = mongoose.model('SaleProduct');
+    const allSaleProducts = await SaleProduct.find();
+    function getTotalUsedInSaleProduct(saleProducts, productId) {
+      let total = 0;
+      for (const sp of saleProducts) {
+        if (sp.saleType === 'retail') {
+          if (
+            sp.productId?.toString() === productId.toString() ||
+            sp.saleItemId?.toString() === productId.toString() ||
+            (sp.items && sp.items[0] && (sp.items[0].productId?.toString() === productId.toString() || sp.items[0].productId?._id?.toString() === productId.toString()))
+          ) {
+            total += Number(sp.quantity) || 0;
+          }
+        } else if (sp.saleType === 'combo' && Array.isArray(sp.items)) {
+          for (const item of sp.items) {
+            if (item.productId?.toString() === productId.toString() || item.productId?._id?.toString() === productId.toString()) {
+              total += (Number(item.quantity) || 0) * (Number(sp.quantity) || 0);
+            }
+          }
+        }
+      }
+      return total;
+    }
+    const usedInSaleProduct = getTotalUsedInSaleProduct(allSaleProducts, product._id);
+    res.status(200).json({ ...product.toObject(), importPrice, usedInSaleProduct });
   } catch (error) {
     console.error("Lỗi khi gọi getProductWithImport:", error);
-    res.status(500).json({ message: "Lỗi hệ thống" })
+    res.status(500).json({ message: "Lỗi hệ thống" });
   }
 }
 

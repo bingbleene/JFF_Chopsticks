@@ -70,13 +70,17 @@ const ImportManagement = () => {
   };
 
   const handleDisableImport = async (imp) => {
-    if (!window.confirm('Bạn chắc chắn muốn hủy phiếu nhập này?')) return;
+    const reason = window.prompt('Nhập lý do huỷ phiếu nhập này:');
+    if (!reason || reason.trim() === '') {
+      toast.error('Bạn phải nhập lý do huỷ!');
+      return;
+    }
     try {
-      await api.put(`/imports/${imp._id}/cancel`);
+      await api.put(`/imports/${imp._id}/cancel`, { cancelReason: reason });
       toast.success('Đã hủy phiếu nhập');
       fetchImports();
     } catch (error) {
-      toast.error('Không thể hủy phiếu nhập');
+      toast.error(error.response?.data?.message || 'Không thể hủy phiếu nhập');
     }
   };
 

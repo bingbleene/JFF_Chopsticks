@@ -1,0 +1,35 @@
+// Hàm tính tổng số lượng còn lại của sản phẩm gốc, loại trừ lượng đã bán của saleProduct đang sửa (nếu có)
+export function getAvailableStockForProduct(productId, products, editingSaleProduct = null) {
+  const product = products.find(p => p._id === productId || p.id === productId);
+  if (!product) return 0;
+  const stock = Number(product.quantity) || 0;
+  let used = Number(product.usedInSaleProduct) || 0;
+  // Nếu đang sửa, loại trừ lượng đã bán của bản ghi đang sửa (nếu có)
+  if (editingSaleProduct) {
+    // retail: chỉ có 1 sản phẩm gốc
+    if (editingSaleProduct.saleType === 'retail') {
+      if (
+        editingSaleProduct.productId === productId ||
+        editingSaleProduct.saleItemId === productId ||
+        (editingSaleProduct.items && editingSaleProduct.items[0] && (editingSaleProduct.items[0].productId === productId || editingSaleProduct.items[0].productId?._id === productId))
+      ) {
+        used -= Number(editingSaleProduct.quantity) || 0;
+      }
+    }
+    // combo: có thể có nhiều sản phẩm gốc
+    if (editingSaleProduct.saleType === 'combo' && Array.isArray(editingSaleProduct.items)) {
+      editingSaleProduct.items.forEach(item => {
+        if (item.productId === productId || item.productId?._id === productId) {
+          used -= (Number(item.quantity) || 0) * (Number(editingSaleProduct.quantity) || 0);
+        }
+      });
+    }
+  }
+  return stock - used;
+}
+
+// Hàm kiểm tra hợp lệ khi nhập saleProduct (tổng số lượng bán mới + đã bán phải <= tồn kho)
+export function isValidSaleQuantity(totalToSell, productId, products, editingSaleProduct = null) {
+  const available = getAvailableStockForProduct(productId, products, editingSaleProduct);
+  return totalToSell <= available;
+}
