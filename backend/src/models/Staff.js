@@ -15,10 +15,11 @@ const staffSchema = new mongoose.Schema(
         type: String
     },
     number: {
-        type: String
+        type: String,
+        sparse: true
     },
     phone: {
-        type: String
+        type: String,
     },
 }
 )

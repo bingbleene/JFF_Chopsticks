@@ -1,3 +1,37 @@
+import api from '@/lib/axios';
+
+// Hook lấy tất cả tag từ API
+export function useTags() {
+  const [allTags, setAllTags] = React.useState([]);
+  const [loadingTags, setLoadingTags] = React.useState(true);
+
+  React.useEffect(() => {
+    let ignore = false;
+    setLoadingTags(true);
+    api.get('/tags')
+      .then(res => {
+        if (!ignore) setAllTags(res.data || []);
+      })
+      .catch(() => {
+        if (!ignore) setAllTags([]);
+      })
+      .finally(() => {
+        if (!ignore) setLoadingTags(false);
+      });
+    return () => { ignore = true; };
+  }, []);
+
+  return { allTags, loadingTags };
+}
+
+// Hàm chuẩn hóa tag (convert id sang object tag)
+export function normalizeTags(tagIds, allTags) {
+  if (!Array.isArray(tagIds)) return [];
+  return tagIds.map(idOrObj => {
+    if (typeof idOrObj === 'object' && idOrObj !== null) return idOrObj;
+    return allTags.find(t => t._id === idOrObj) || { _id: idOrObj, name: idOrObj };
+  });
+}
 import React from 'react'
 
 // Custom hook để xử lý form

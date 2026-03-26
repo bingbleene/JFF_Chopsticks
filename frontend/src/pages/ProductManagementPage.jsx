@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import Navigation from '../components/Navigation'
-import InventoryTabs from '../components/inventory/InventoryTabs'
+import InventoryTabs from '../features/inventory/InventoryTabs'
 
 const ProductManagementPage = () => {
   const [activeTab, setActiveTab] = useState('total')

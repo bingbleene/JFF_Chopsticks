@@ -5,6 +5,8 @@ import ImportPage from "./pages/ImportPage";
 import ProductManagementPage from "./pages/ProductManagementPage";
 import InvoicePage from "./pages/InvoicePage";
 import NotFound from "./pages/NotFound";
+import SignInPage from './pages/SignInPage';
+import ProtectedRoute from './components/auth/protectedRoute';
 
 function App() {
   return (
@@ -12,9 +14,17 @@ function App() {
       <Toaster richColors />
       <BrowserRouter>
         <Routes>
+          // Public routes
           <Route
-            path="/"
-            element={<HomePage />}
+            path="/signin"
+            element={<SignInPage />}
+          />
+
+          // Private routes
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/"
+              element={<HomePage />}
           />
 
           <Route
@@ -36,6 +46,8 @@ function App() {
             path="*"
             element={<NotFound />}
           />
+        </Route>
+        
         </Routes>
       </BrowserRouter>
     </>

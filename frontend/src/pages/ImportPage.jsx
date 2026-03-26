@@ -2,7 +2,7 @@ import React from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Navigation from '../components/Navigation';
-import ImportManagement from '../components/import/ImportManagement';
+import ImportManagement from '../features/import/ImportManagement';
 
 const ImportPage = () => {
   return (

@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import Navigation from '../components/Navigation'
-import InvoiceTabs from '../components/invoice/InvoiceTabs'
-import InvoiceDetailDialog from '../components/invoice/invoiceHistory/InvoiceDetailDialog'
+import InvoiceTabs from '../features/invoice/InvoiceTabs'
 import { toast } from 'sonner'
 import api from '@/lib/axios'
-import { formatCurrency } from '@/lib/hooks'
 import { getPaymentMethodLabel } from '@/lib/data'
 
 const InvoicePage = () => {
@@ -149,15 +147,6 @@ const InvoicePage = () => {
             formatDate={formatDate}
             handleChangeStatus={handleChangeStatus}
             handleCancelInvoice={handleCancelInvoice}
-          />
-
-          {/* Invoice Detail Dialog */}
-          <InvoiceDetailDialog
-            open={isDetailOpen}
-            onOpenChange={setIsDetailOpen}
-            selectedInvoice={selectedInvoice}
-            formatDate={formatDate}
-            getPaymentMethodLabel={getPaymentMethodLabel}
           />
 
           {/* Footer */}
