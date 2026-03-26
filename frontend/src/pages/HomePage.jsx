@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router'
 import Header from '../components/Header'
+import Logout from '../components/auth/Logout'
 import Footer from '../components/Footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,6 +62,11 @@ const HomePage = () => {
 
       <div className="container pt-8 mx-auto">
         <div className="w-full max-w-6xl p-6 mx-auto space-y-6 relative z-10">
+          {/* Logout Button */}
+          <div className="flex justify-end mb-2">
+            <Logout />
+          </div>
+
           {/* Header */}
           <Header />
 

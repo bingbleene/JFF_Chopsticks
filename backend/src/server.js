@@ -6,10 +6,14 @@ import invoicesRoute from './routes/invoicesRouters.js'
 import staffsRoute from './routes/staffsRouters.js'
 import importRouters from './routes/importRouters.js'
 import tagsRouters from './routes/tagsRouters.js'
+import authRoute from './routes/authRoutes.js'
+import userRoute from './routes/userRoutes.js'
 import { connectDB } from './config/db.js'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
+import cookieParser from 'cookie-parser'
+import { protectedRoute } from './middlewares/authMiddleware.js'
 
 dotenv.config()
 
@@ -22,9 +26,20 @@ const app = express()
 // middlewares
 app.use(express.json())
 if (process.env.NODE_ENV !== "production") {
-  app.use(cors())
+  app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+  }))
 }
 
+app.use(cookieParser())
+
+// public API
+app.use("/api/auth", authRoute)
+
+// private API
+app.use(protectedRoute)
+app.use("/api/users", userRoute)
 app.use("/api/products", productsRoute)
 app.use("/api/sale-products", salesProductsRoute)
 app.use("/api/vouchers", vouchersRoute)
