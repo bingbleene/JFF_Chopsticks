@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Cross2Icon } from "@radix-ui/react-icons"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils"
 
 const Sheet = AlertDialogPrimitive.Root
 

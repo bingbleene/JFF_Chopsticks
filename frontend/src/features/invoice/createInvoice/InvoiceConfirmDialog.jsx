@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/utils/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getPaymentMethodLabel } from '@/lib/data';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/utils/utils';
 import LoadingItem from '@/components/LoadingItem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

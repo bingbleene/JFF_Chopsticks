@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import {
   DropdownMenu,
@@ -57,7 +58,13 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
                   </ul>
                 ) : '-'}
               </TableCell>
-              <TableCell>{imp.status === 'active' ? 'Sử dụng' : 'Đã hủy'}</TableCell>
+              <TableCell>
+                {imp.status === 'active' ? (
+                  <Badge variant="success">Sử dụng</Badge>
+                ) : (
+                  <Badge variant="secondary">Đã hủy</Badge>
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

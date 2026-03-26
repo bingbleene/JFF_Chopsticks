@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/utils/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +32,7 @@ const ProductTable = ({
             <TableHead>Tên sản phẩm</TableHead>
             <TableHead>Tag</TableHead>
             <TableHead className="text-right">Số lượng</TableHead>
+            <TableHead className="text-right">Mang đi bán</TableHead>
             <TableHead className="text-right">Giá nhập</TableHead>
             <TableHead className="text-right">Hành động</TableHead>
           </TableRow>
@@ -59,6 +60,11 @@ const ProductTable = ({
               <TableCell className="text-right">
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
                   {product.quantity} {product.unit || 'cái'}
+                </span>
+              </TableCell>
+              <TableCell className="text-right">
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                  {product.usedInSaleProduct ?? 0} {product.unit || 'cái'}
                 </span>
               </TableCell>
               <TableCell className="text-right">

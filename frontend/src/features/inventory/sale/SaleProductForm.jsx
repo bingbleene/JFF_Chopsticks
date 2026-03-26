@@ -1,13 +1,10 @@
+import api from '@/lib/axios'
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card } from '@/components/ui/card'
-import { Plus, Trash2 } from 'lucide-react'
 import {
   Combobox,
-  ComboboxInput,
   ComboboxContent,
   ComboboxList,
   ComboboxItem,
@@ -17,10 +14,11 @@ import {
   ComboboxValue,
   ComboboxChipsInput
 } from '@/components/ui/combobox'
-import { DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import api from '@/lib/axios'
-import { validateProductStock, getTotalProductInCart } from '@/lib/utils';
+import { validateRequired, validateNumber } from '@/lib/helpers';
+import { isValidSaleQuantity, getAvailableStockForProduct } from '@/utils/checkQuantityForSaleProduct';
+import SaleProductFields from './SaleProductFields';
 
 const SaleProductForm = ({
   saleProduct,
@@ -79,7 +77,41 @@ const SaleProductForm = ({
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Hàm validate trả về errors object
+  // So sánh formData với saleProduct để biết form có thay đổi không
+  const isFormChanged = () => {
+    if (!saleProduct) return true;
+    // So sánh các trường cơ bản
+    if (
+      formData.name !== (saleProduct.name || '') ||
+      formData.description !== (saleProduct.description || '') ||
+      formData.saleType !== (saleProduct.saleType || 'retail') ||
+      String(formData.price) !== String(saleProduct.price || '') ||
+      String(formData.quantity) !== String(saleProduct.quantity || '')
+    ) return true;
+    // So sánh tags
+    const tags1 = Array.isArray(formData.tags) ? formData.tags.map(String).sort() : [];
+    const tags2 = Array.isArray(saleProduct.tags)
+      ? saleProduct.tags.map(t => (typeof t === 'object' && t !== null ? String(t._id) : String(t))).sort()
+      : (saleProduct.tag ? [String(saleProduct.tag)] : []);
+    if (tags1.join(',') !== tags2.join(',')) return true;
+    // So sánh items
+    const items1 = Array.isArray(formData.items) ? formData.items : [];
+    const items2 = Array.isArray(saleProduct.items)
+      ? saleProduct.items.map(item => ({
+          productId: item.productId?._id || item.productId || '',
+          quantity: item.quantity || 1
+        }))
+      : [];
+    if (items1.length !== items2.length) return true;
+    for (let i = 0; i < items1.length; ++i) {
+      if (
+        String(items1[i].productId) !== String(items2[i].productId) ||
+        String(items1[i].quantity) !== String(items2[i].quantity)
+      ) return true;
+    }
+    return false;
+  };
+
   const validateErrors = () => {
     const newErrors = {};
     if (!validateRequired(formData.name)) {
@@ -97,26 +129,20 @@ const SaleProductForm = ({
     } else if (formData.saleType === 'retail' && formData.items.length === 1) {
       const productInfo = products.find(p => (p._id === formData.items[0]?.productId || p.id === formData.items[0]?.productId));
       if (productInfo && productInfo.quantity !== undefined) {
-        const stock = productInfo.quantity;
         const productId = productInfo._id || productInfo.id;
-        let totalUsed = 0;
-        allSaleProducts.forEach(sp => {
-          if (saleProduct && (sp._id === saleProduct._id || sp.id === saleProduct.id)) return;
-          if (sp.saleType === 'retail') {
-            if (sp.items && sp.items[0] && (sp.items[0].productId === productId || sp.items[0].productId?._id === productId)) {
-              totalUsed += Number(sp.quantity) || 0;
-            }
-          } else if (sp.saleType === 'combo' && Array.isArray(sp.items)) {
-            sp.items.forEach(item => {
-              if (item.productId === productId || item.productId?._id === productId) {
-                totalUsed += (Number(item.quantity) || 0) * (Number(sp.quantity) || 1);
-              }
-            });
-          }
-        });
         const currentInput = Number(formData.quantity) || 0;
-        if (totalUsed + currentInput > stock) {
-          newErrors.quantity = `Tồn kho chỉ còn ${stock}, đã dùng: ${totalUsed}`;
+        const availableStock = getAvailableStockForProduct(productId, products, saleProduct);
+        // DEBUG LOG
+        console.log('[DEBUG] Áo M:', {
+          productId,
+          quantity: productInfo.quantity,
+          usedInSaleProduct: productInfo.usedInSaleProduct,
+          availableStock,
+          currentInput,
+          isValid: isValidSaleQuantity(currentInput, productId, products, saleProduct)
+        });
+        if (!isValidSaleQuantity(currentInput, productId, products, saleProduct)) {
+          newErrors.quantity = `Tồn kho không đủ cho số lượng này.`;
         }
       }
     }
@@ -137,26 +163,11 @@ const SaleProductForm = ({
       } else {
         const productInfo = products.find(p => (p._id === item.productId || p.id === item.productId));
         if (productInfo && productInfo.quantity !== undefined) {
-          const stock = productInfo.quantity;
           const productId = productInfo._id || productInfo.id;
-          let totalUsed = 0;
-          allSaleProducts.forEach(sp => {
-            if (saleProduct && (sp._id === saleProduct._id || sp.id === saleProduct.id)) return;
-            if (sp.saleType === 'retail') {
-              if (sp.items && sp.items[0] && (sp.items[0].productId === productId || sp.items[0].productId?._id === productId)) {
-                totalUsed += Number(sp.quantity) || 0;
-              }
-            } else if (sp.saleType === 'combo' && Array.isArray(sp.items)) {
-              sp.items.forEach(spItem => {
-                if (spItem.productId === productId || spItem.productId?._id === productId) {
-                  totalUsed += (Number(spItem.quantity) || 0) * (Number(sp.quantity) || 1);
-                }
-              });
-            }
-          });
-          const currentInput = Number(item.quantity) || 0;
-          if (totalUsed + currentInput > stock) {
-            newErrors[`item_${index}_quantity`] = `Tồn kho chỉ còn ${stock}, đã dùng: ${totalUsed}`;
+          // Nếu là combo, kiểm tra tồn kho: item.quantity * formData.quantity
+          const totalToSell = (formData.saleType === 'combo') ? (Number(item.quantity) || 0) * (Number(formData.quantity) || 0) : (Number(item.quantity) || 0);
+          if (!isValidSaleQuantity(totalToSell, productId, products, saleProduct)) {
+            newErrors[`item_${index}_quantity`] = `Tồn kho không đủ cho số lượng này.`;
           }
         }
       }
@@ -164,10 +175,8 @@ const SaleProductForm = ({
     return newErrors;
   };
 
-  // Tự động validate khi thay đổi quantity hoặc items
   useEffect(() => {
     setErrors(validateErrors());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.quantity, formData.items]);
 
   // Fetch all tags from API
@@ -178,16 +187,6 @@ const SaleProductForm = ({
         .catch(() => toast.error('Không thể tải danh sách tag'))
       .finally(() => setLoadingTags(false))
   }, [])
-
-  // Tag combobox handler (multi)
-  const handleTagChange = (tagId) => {
-    setFormData(prev => {
-      const tags = prev.tags.includes(tagId)
-        ? prev.tags.filter(t => t !== tagId)
-        : [...prev.tags, tagId]
-      return { ...prev, tags }
-    })
-  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -202,12 +201,6 @@ const SaleProductForm = ({
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, { productId: '', quantity: 1 }]
-    }))
-  }
-  const handleRemoveItem = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
     }))
   }
 
@@ -281,186 +274,25 @@ const SaleProductForm = ({
       }
       onClose()
     } catch (error) {
-      console.error('[SaleProductForm] Lỗi khi gọi API:', error)
+      console.error('Lỗi khi gọi API:', error)
       const errorMsg = error.response?.data?.message || 'Lỗi khi lưu sản phẩm'
       toast.error(errorMsg)
     } finally {
       setIsSubmitting(false)
     }
   }
-
-
-
-
-  const isRetail = formData.saleType === 'retail';
-
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="name">Tên sản phẩm bán *</Label>
-          <Input
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder={isRetail ? 'VD: Sticker BL' : 'VD: Combo Dây đeo & Bao thẻ'}
-            className={errors.name ? 'border-destructive' : ''}
-            disabled={onlyEditQuantity}
-            tabIndex={onlyEditQuantity ? -1 : 0}
-          />
-          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-        </div>
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="price">Giá bán (VND) *</Label>
-          <div className="relative">
-            <Input
-              id="price"
-              name="price"
-              type="text"
-              inputMode="numeric"
-              value={
-                formData.price === '' ? '' : Number(formData.price).toLocaleString('vi-VN')
-              }
-              onChange={e => {
-                const raw = e.target.value.replace(/[^\d]/g, '')
-                setFormData(prev => ({ ...prev, price: raw }))
-                if (errors.price) setErrors(prev => ({ ...prev, price: '' }))
-              }}
-              placeholder="0"
-              min="0"
-              className={errors.price ? 'border-destructive' : ''}
-              autoComplete="off"
-              disabled={onlyEditQuantity}
-              tabIndex={onlyEditQuantity ? -1 : 0}
-            />
-          </div>
-          {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
-        </div>
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="quantity">Số lượng *</Label>
-          <Input
-            id="quantity"
-            name="quantity"
-            type="number"
-            value={formData.quantity}
-            onChange={handleChange}
-            placeholder="0"
-            min="0"
-            step="1"
-            className={errors.quantity ? 'border-destructive' : ''}
-          />
-          {errors.quantity && <p className="text-xs text-destructive">{errors.quantity}</p>}
-        </div>
-      </div>
-
-      {/* Sản phẩm gốc */}
-      <div className="space-y-2">
-        <Label>{isRetail ? 'Sản phẩm gốc (chỉ 1 sản phẩm) *' : 'Sản phẩm trong combo *'}</Label>
-        {errors.items && <p className="text-xs text-destructive">{errors.items}</p>}
-        {isRetail ? (
-          <Combobox
-            items={products}
-            value={products.find(p => (p._id === formData.items[0]?.productId || p.id === formData.items[0]?.productId)) || null}
-            onValueChange={val => setFormData(prev => ({ ...prev, items: [{ productId: val ? (val._id || val.id) : '', quantity: 1 }] }))}
-            itemToStringValue={p => p?.name || ''}
-            disabled={onlyEditQuantity}
-          >
-            <ComboboxInput
-              placeholder="Chọn sản phẩm gốc"
-              value={
-                products.find(p => (p._id === formData.items[0]?.productId || p.id === formData.items[0]?.productId))?.name || ''
-              }
-              readOnly
-              tabIndex={onlyEditQuantity ? -1 : 0}
-            />
-            <ComboboxContent className="w-[--radix-popover-trigger-width] max-h-60 overflow-y-auto">
-              <ComboboxEmpty>Không có sản phẩm.</ComboboxEmpty>
-              <ComboboxList>
-                {(p) => (
-                  <ComboboxItem key={p._id || p.id} value={p}>
-                    {p.name}
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        ) : (
-          <div className="space-y-2">
-            {/* Tiêu đề các cột */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium mb-1 pl-1">
-              <div className="w-56">Sản phẩm</div>
-              <div className="w-20 text-center">Số lượng</div>
-              <div className="w-28 text-center">Giá nhập</div>
-              <div className="w-24 text-center">Tồn kho</div>
-              <div className="w-8" />
-            </div>
-            {formData.items.map((item, index) => {
-              const productInfo = products.find(p => (p._id === item.productId || p.id === item.productId));
-              return (
-                <div key={index} className="flex items-center gap-2 mb-2">
-                  <div className="w-56">
-                    <Combobox
-                      items={products}
-                      value={products.find(p => (p._id === item.productId || p.id === item.productId)) || null}
-                      onValueChange={val => handleItemChange(index, 'productId', val ? (val._id || val.id) : '')}
-                      itemToStringValue={p => p?.name || ''}
-                      disabled={onlyEditQuantity}
-                    >
-                      <ComboboxInput
-                        placeholder="Chọn sản phẩm"
-                        value={products.find(p => (p._id === item.productId || p.id === item.productId))?.name || ''}
-                        readOnly
-                        tabIndex={onlyEditQuantity ? -1 : 0}
-                      />
-                      <ComboboxContent>
-                        <ComboboxEmpty>Không có sản phẩm.</ComboboxEmpty>
-                        <ComboboxList>
-                          {(p) => (
-                            <ComboboxItem key={p._id || p.id} value={p}>
-                              {p.name} (Kho: {p.quantity} {p.unit || 'cái'})
-                            </ComboboxItem>
-                          )}
-                        </ComboboxList>
-                      </ComboboxContent>
-                    </Combobox>
-                  </div>
-                  <div className="w-20">
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={e => handleItemChange(index, 'quantity', e.target.value)}
-                      placeholder="Số lượng"
-                      min="1"
-                      step="1"
-                      className={errors[`item_${index}_quantity`] ? 'border-destructive' : ''}
-                      disabled={onlyEditQuantity}
-                      tabIndex={onlyEditQuantity ? -1 : 0}
-                    />
-                  </div>
-                  <div className="w-28 text-center text-xs text-muted-foreground">
-                    {productInfo && typeof productInfo.importPrice === 'number'
-                      ? productInfo.importPrice.toLocaleString('vi-VN') + ' ₫'
-                      : <span className="italic">Chưa có</span>}
-                  </div>
-                  <div className="w-24 text-center text-xs text-muted-foreground">
-                    {productInfo && typeof productInfo.quantity === 'number'
-                      ? productInfo.quantity.toLocaleString('vi-VN') + ' ' + (productInfo.unit || 'cái')
-                      : <span className="italic">Chưa có</span>}
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={onlyEditQuantity} tabIndex={onlyEditQuantity ? -1 : 0}>
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              );
-            })}
-            <Button type="button" variant="outline" size="sm" onClick={handleAddItem} className="gap-1" disabled={onlyEditQuantity} tabIndex={onlyEditQuantity ? -1 : 0}>
-              <Plus size={16} /> Thêm sản phẩm
-            </Button>
-          </div>
-        )}
-      </div>
+    <form onSubmit={handleSubmit}>
+      <SaleProductFields
+        formData={formData}
+        setFormData={setFormData}
+        errors={errors}
+        products={products}
+        saleProduct={saleProduct}
+        onlyEditQuantity={onlyEditQuantity}
+        handleItemChange={handleItemChange}
+        handleAddItem={handleAddItem}
+      />
 
       {/* TAG */}
       <div className="space-y-2">
@@ -507,7 +339,7 @@ const SaleProductForm = ({
       </div>
 
       {/* Mô tả */}
-      <div className="space-y-2">
+      <div className="space-y-2 mb-4 mt-4">
         <Label htmlFor="description">Mô tả (tùy chọn)</Label>
         <Textarea
           id="description"
@@ -521,12 +353,12 @@ const SaleProductForm = ({
 
       {/* ACTION */}
       <DialogFooter>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || (saleProduct && !isFormChanged())}>
           {isSubmitting ? 'Đang lưu...' : (saleProduct ? 'Cập nhật' : 'Thêm')}
         </Button>
       </DialogFooter>
     </form>
-  )
+  );
 }
 
 export default SaleProductForm
