@@ -5,7 +5,7 @@ import crypto from 'crypto'
 import User from '../models/User.js'
 import Session from '../models/Session.js'
 
-const ACCESS_TOKEN_TTL = '30m' //  khi deloy đổi thành 15m
+const ACCESS_TOKEN_TTL = '30s' //  khi deloy đổi thành 15m
 const REFRESH_TOKEN_TTL = 14*24*60*60*1000 // đổi sang miligiay
 
 export const signUp = async (req, res) => {
@@ -119,3 +119,42 @@ export const signOut = async (req, res) => {
         
     }
 };
+
+// tạo access token mới từ refersh token
+export const refreshToken = async (req, res) => {
+    try {
+        // lấy refresh token từ cookie
+        const token = req.cookies?.refreshToken;
+
+        if (!token) {
+            return res.status(401).json({ message: "Token không tồn tại"})
+        }
+        // so với refreshtoken trong db
+        const session = await Session.findOne({ refreshToken: token });
+
+        if (!session) {
+            return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn."})
+        }
+
+        // kiểm tra refreshtoken hết hạn chưa
+        if (session.expiresAt < new Date()) {
+            return res.status(403).json({ message: "Token đã hết hạn."})
+        }
+
+        // tạo access token mới
+        const accessToken = jwt.sign({
+            userId: session.userId,
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: ACCESS_TOKEN_TTL }
+        );
+
+        // return
+        return res.status(200).json({ accessToken });
+        
+    } catch (error) {
+        console.error("Lỗi khi gọi refreshToken:", error);
+        return res.status(500).json({ message: "Lỗi hệ thống" });
+        
+    }
+}
