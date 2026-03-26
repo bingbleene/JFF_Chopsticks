@@ -30,11 +30,6 @@ if (process.env.NODE_ENV !== "production") {
     origin: 'http://localhost:5173',
     credentials: true
   }))
-} else {
-  app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials: true
-  }))
 }
 
 app.use(cookieParser())
@@ -43,15 +38,15 @@ app.use(cookieParser())
 app.use("/api/auth", authRoute)
 
 // private API
-app.use(protectedRoute)
-app.use("/api/users", userRoute)
-app.use("/api/products", productsRoute)
-app.use("/api/sale-products", salesProductsRoute)
-app.use("/api/vouchers", vouchersRoute)
-app.use("/api/invoices", invoicesRoute)
-app.use("/api/staffs", staffsRoute)
-app.use("/api/imports", importRouters)
-app.use("/api/tags", tagsRouters)
+
+app.use("/api/users", protectedRoute, userRoute)
+app.use("/api/products", protectedRoute, productsRoute)
+app.use("/api/sale-products", protectedRoute, salesProductsRoute)
+app.use("/api/vouchers", protectedRoute, vouchersRoute)
+app.use("/api/invoices", protectedRoute, invoicesRoute)
+app.use("/api/staffs", protectedRoute, staffsRoute)
+app.use("/api/imports", protectedRoute, importRouters)
+app.use("/api/tags", protectedRoute, tagsRouters)
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")))
