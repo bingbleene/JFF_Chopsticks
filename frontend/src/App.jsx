@@ -6,7 +6,7 @@ import ProductManagementPage from "./pages/ProductManagementPage";
 import InvoicePage from "./pages/InvoicePage";
 import NotFound from "./pages/NotFound";
 import SignInPage from './pages/SignInPage';
-import ProtectedRoute from './components/auth/protectedRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
