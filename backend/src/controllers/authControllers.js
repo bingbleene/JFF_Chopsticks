@@ -84,10 +84,11 @@ export const signIn = async (req, res) => {
         });
 
         // trả refresh token về trong cookie
+        // Thiết lập cookie phù hợp môi trường
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
             maxAge: REFRESH_TOKEN_TTL,
         });
 
