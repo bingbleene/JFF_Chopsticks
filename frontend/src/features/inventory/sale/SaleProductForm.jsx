@@ -220,6 +220,14 @@ const SaleProductForm = ({
     }
   }
 
+  // Xóa sản phẩm khỏi combo
+  const handleRemoveItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
+  };
+
   // validateForm chỉ dùng cho submit
   const validateForm = () => {
     const errs = validateErrors();
@@ -292,6 +300,7 @@ const SaleProductForm = ({
         onlyEditQuantity={onlyEditQuantity}
         handleItemChange={handleItemChange}
         handleAddItem={handleAddItem}
+        handleRemoveItem={handleRemoveItem}
       />
 
       {/* TAG */}

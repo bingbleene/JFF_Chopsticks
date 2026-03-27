@@ -6,7 +6,7 @@ import { Search, Plus } from 'lucide-react';
 import SearchBox from '@/components/SearchBox';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import InvoiceSaleProductForm from './InvoiceSaleProductForm';
-import { AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ProductSelection = ({
   isLoading,

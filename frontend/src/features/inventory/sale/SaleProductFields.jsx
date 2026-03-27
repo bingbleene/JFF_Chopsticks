@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ const SaleProductFields = ({
   disableQuantity = false,
   handleItemChange,
   handleAddItem,
+  handleRemoveItem, // Thêm prop mới
 }) => {
   const isRetail = formData.saleType === 'retail';
 
@@ -160,7 +162,8 @@ const SaleProductFields = ({
                         <ComboboxList>
                           {(p) => (
                             <ComboboxItem key={p._id || p.id} value={p}>
-                              {p.name} (Kho: {p.quantity} {p.unit || 'cái'})
+                              {p.name} 
+                              {/* (Kho: {p.quantity} {p.unit || 'cái'}) */}
                             </ComboboxItem>
                           )}
                         </ComboboxList>
@@ -185,7 +188,22 @@ const SaleProductFields = ({
                       ? stock
                       : <span className="italic">Chưa có</span>}
                   </div>
-                  <div className="w-8" />
+                  <div className="w-8 flex items-center justify-center">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      title="Xóa sản phẩm khỏi combo"
+                      onClick={() => {
+                        console.log('Xóa sản phẩm combo index:', index);
+                        handleRemoveItem && handleRemoveItem(index);
+                      }}
+                      disabled={onlyEditQuantity || disableItems}
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
                 </div>
               );
             })}
