@@ -47,7 +47,6 @@ export const createTag = async (req, res) => {
         let tryCount = 0;
         const maxTry = 10;
         while (tryCount < maxTry) {
-            // Lấy tag cuối cùng theo tagIndex
             const lastTag = await Tag.findOne({ tagIndex: { $regex: `^${prefix}` } }).sort({ tagIndex: -1 });
             if (lastTag && lastTag.tagIndex) {
                 const lastNumberStr = lastTag.tagIndex.slice(-4);
@@ -103,10 +102,14 @@ export const updateTag = async (req, res) => {
             return res.status(404).json({ message: 'Tag không tồn tại' })
         }
 
-        const updatedTag = await tag.save()
-        res.status(200).json(updatedTag)
+        // Gán các trường được cập nhật vào object tag
+        if (updateData.name !== undefined) tag.name = updateData.name;
+        if (updateData.description !== undefined) tag.description = updateData.description;
+
+        const updatedTag = await tag.save();
+        res.status(200).json(updatedTag);
     } catch (error) {
-        console.error("Lỗi khi gọi updateTag:", error);
+        // ...existing code...
         res.status(500).json({ message: "Lỗi hệ thống" })
     }
 }
