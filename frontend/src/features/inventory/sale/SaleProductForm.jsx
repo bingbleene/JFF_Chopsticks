@@ -17,7 +17,7 @@ import {
 import { DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { validateRequired, validateNumber } from '@/lib/helpers';
-import { isValidSaleQuantity, getAvailableStockForProduct } from '@/utils/checkQuantityForSaleProduct';
+import { isValidSaleQuantity, getAvailableStockForProduct } from '@/utils/saleProductValidate';
 import SaleProductFields from './SaleProductFields';
 
 const SaleProductForm = ({
@@ -132,15 +132,6 @@ const SaleProductForm = ({
         const productId = productInfo._id || productInfo.id;
         const currentInput = Number(formData.quantity) || 0;
         const availableStock = getAvailableStockForProduct(productId, products, saleProduct);
-        // DEBUG LOG
-        console.log('[DEBUG] Áo M:', {
-          productId,
-          quantity: productInfo.quantity,
-          usedInSaleProduct: productInfo.usedInSaleProduct,
-          availableStock,
-          currentInput,
-          isValid: isValidSaleQuantity(currentInput, productId, products, saleProduct)
-        });
         if (!isValidSaleQuantity(currentInput, productId, products, saleProduct)) {
           newErrors.quantity = `Tồn kho không đủ cho số lượng này.`;
         }

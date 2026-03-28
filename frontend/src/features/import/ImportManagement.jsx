@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 
 import api from '@/lib/axios';
 import { toast } from 'sonner';
+import { validateCancelImport } from '@/utils/importValidate';
 
 const ImportManagement = () => {
   const handleNext = () => { if (page < totalPages) setPage(prev => prev + 1); };
@@ -69,10 +70,16 @@ const ImportManagement = () => {
     setIsFormOpen(false);
   };
 
-  const handleDisableImport = async (imp) => {
-    const reason = window.prompt('Nhập lý do huỷ phiếu nhập này:');
+  // Nhận thêm tham số reason từ dialog
+  const handleDisableImport = async (imp, reason) => {
     if (!reason || reason.trim() === '') {
       toast.error('Bạn phải nhập lý do huỷ!');
+      return;
+    }
+    // Validate tồn kho trước khi hủy
+    const check = await validateCancelImport(imp.items || []);
+    if (!check.ok) {
+      toast.error(check.message || 'Không thể hủy phiếu nhập do tồn kho không đủ.');
       return;
     }
     try {

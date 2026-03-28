@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import CancelImportDialog from '../../components/CancelReasonDialog';
 import { Eye, Ban, MoreHorizontal as MoreHorizontalIcon, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -16,6 +17,7 @@ import { format } from 'date-fns';
 
 const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handleDisableImport }) => {
   const [expandedId, setExpandedId] = useState(null);
+  const [cancelDialogOpenId, setCancelDialogOpenId] = useState(null);
 
   // Only expand/collapse via dropdown action
   const handleExpandDetail = (id) => {
@@ -81,7 +83,7 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
                     {/* <DropdownMenuItem>Sửa</DropdownMenuItem> */}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => handleDisableImport(imp)}
+                      onClick={() => setCancelDialogOpenId(imp._id)}
                       disabled={imp.status !== 'active'}
                       className={imp.status === 'active' ? 'text-destructive' : ''}
                     >
@@ -146,6 +148,19 @@ const ImportTable = ({ visibleImports, page, pageSize, setSelectedImport, handle
                   <div className="text-sm text-muted-foreground mt-3"><b>Ghi chú:</b> {imp.note || '-'}</div>
                 </TableCell>
               </TableRow>
+            )}
+            {/* CancelImportDialog hiển thị ngoài DropdownMenu để không bị đóng khi mở dialog */}
+            {cancelDialogOpenId === imp._id && (
+              <CancelImportDialog
+                onConfirm={reason => {
+                  setCancelDialogOpenId(null);
+                  handleDisableImport(imp, reason);
+                }}
+                onOpenChange={open => {
+                  if (!open) setCancelDialogOpenId(null);
+                }}
+                open={cancelDialogOpenId === imp._id}
+              />
             )}
           </React.Fragment>
         ))}

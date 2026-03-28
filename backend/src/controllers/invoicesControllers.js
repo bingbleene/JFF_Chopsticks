@@ -5,15 +5,21 @@ import Voucher from '../models/Voucher.js'
 
 export const getAllInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find()
-          .populate('items.saleItemId', 'name price saleType')
-          .populate('vouchers.voucherId', 'name type value')
-          .populate('staff', 'name number')
-          .sort({ dateBought: -1})
-        res.status(200).json(invoices)
+      const { saleProductId } = req.query;
+      let filter = {};
+      if (saleProductId) {
+        // Filter invoices that have at least one item with saleItemId == saleProductId
+        filter['items.saleItemId'] = saleProductId;
+      }
+      const invoices = await Invoice.find(filter)
+        .populate('items.saleItemId', 'name price saleType')
+        .populate('vouchers.voucherId', 'name type value')
+        .populate('staff', 'name number')
+        .sort({ dateBought: -1})
+      res.status(200).json(invoices)
     } catch (error) {
-        console.error("Lỗi khi gọi getAllInvoices:", error);
-        res.status(500).json({ message: "Lỗi hệ thống" })
+      console.error("Lỗi khi gọi getAllInvoices:", error);
+      res.status(500).json({ message: "Lỗi hệ thống" })
     }
 }
 
@@ -59,7 +65,6 @@ export const createInvoice = async (req, res) => {
     let nextNumber = 1
 
     if (lastInvoice) {
-      // Nếu invoiceIndex có dấu '-', tách lấy số sau dấu '-', nếu không thì lấy 8 ký tự cuối
       let lastNumber = 1;
       const idx = lastInvoice.invoiceIndex.indexOf('-');
       if (idx !== -1) {

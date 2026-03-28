@@ -81,14 +81,18 @@ const InvoicePage = () => {
     }
   }
 
-  const handleCancelInvoice = async (invoice) => {
-    if (!window.confirm('Bạn chắc chắn muốn hủy hóa đơn này?')) return;
+  // Đã dùng CancelImportDialog ở InvoiceTable, chỉ cần nhận lý do và truyền vào API
+  const handleCancelInvoice = async (invoice, cancelReason) => {
+    if (!cancelReason || cancelReason.trim() === '') {
+      toast.error('Bạn phải nhập lý do hủy!');
+      return;
+    }
     try {
-      await api.put(`/invoices/${invoice._id || invoice.id}/cancel`)
-      toast.success('Đã hủy hóa đơn')
-      fetchInvoices()
+      await api.put(`/invoices/${invoice._id || invoice.id}/cancel`, { cancelReason });
+      toast.success('Đã hủy hóa đơn');
+      fetchInvoices();
     } catch (error) {
-      toast.error('Lỗi khi hủy hóa đơn')
+      toast.error('Lỗi khi hủy hóa đơn');
     }
   }
 
