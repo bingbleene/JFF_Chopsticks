@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import CancelImportDialog from '@/components/CancelReasonDialog';
 import api from '@/lib/axios';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ const InvoiceTable = ({
     return <div className="text-red-600">Lỗi: Hàm xử lý dữ liệu không hợp lệ.</div>;
   }
   const [expandedId, setExpandedId] = useState(null);
+  const [cancelDialogOpenId, setCancelDialogOpenId] = useState(null);
 
   
   const [saleProducts, setSaleProducts] = useState([]);
@@ -139,7 +141,7 @@ const InvoiceTable = ({
                       ) : null}
                       <DropdownMenuSeparator />
                       {invoice?.status !== 'cancelled' && (
-                        <DropdownMenuItem variant="destructive" onClick={() => handleCancelInvoice(invoice)}>
+                        <DropdownMenuItem variant="destructive" onClick={() => setCancelDialogOpenId(invoice._id)}>
                           <Ban className="w-4 h-4 mr-2" />
                           Hủy
                         </DropdownMenuItem>
@@ -167,6 +169,19 @@ const InvoiceTable = ({
             )
           ])}
         </TableBody>
+        {/* CancelImportDialog dùng chung cho hủy hóa đơn */}
+        {cancelDialogOpenId && (
+          <CancelImportDialog
+            type="invoice"
+            open={!!cancelDialogOpenId}
+            onOpenChange={open => { if (!open) setCancelDialogOpenId(null); }}
+            onConfirm={reason => {
+              setCancelDialogOpenId(null);
+              const invoice = visibleInvoices.find(inv => inv._id === cancelDialogOpenId);
+              if (invoice) handleCancelInvoice(invoice, reason);
+            }}
+          />
+        )}
       </Table>
     </div>
   );

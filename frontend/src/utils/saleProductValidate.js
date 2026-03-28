@@ -1,3 +1,32 @@
+
+import api from "@/lib/axios";
+
+
+/**
+ * Kiểm tra saleProduct có thể xóa không:
+ * Nếu saleProduct này có trong ít nhất 1 hóa đơn thì không cho xóa, ngược lại thì cho xóa.
+ * @param {string} saleProductId
+ * @returns {Promise<{canDelete: boolean, invoiceCount: number}>}
+ */
+export async function validateDeleteSaleProduct(saleProductId) {
+  try {
+    // Gọi API lấy danh sách hóa đơn có chứa saleProduct này
+    const res = await api.get(`/invoices?saleProductId=${saleProductId}`);
+    // Giả sử API trả về mảng invoices
+    const invoices = res.data?.invoices || res.data || [];
+    return {
+      canDelete: invoices.length === 0,
+      invoiceCount: invoices.length
+    };
+  } catch (err) {
+    // Nếu lỗi, không cho xóa để an toàn
+    return {
+      canDelete: false,
+      invoiceCount: -1
+    };
+  }
+}
+
 // Hàm tính tổng số lượng còn lại của sản phẩm gốc, loại trừ lượng đã bán của saleProduct đang sửa (nếu có)
 export function getAvailableStockForProduct(productId, products, editingSaleProduct = null) {
   const product = products.find(p => p._id === productId || p.id === productId);

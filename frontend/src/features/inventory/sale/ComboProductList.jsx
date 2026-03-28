@@ -1,4 +1,6 @@
 import React from 'react';
+import { validateDeleteSaleProduct } from '@/utils/saleProductValidate';
+import { toast } from 'sonner';
 import LoadingItem from '@/components/LoadingItem';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,8 +23,24 @@ const ComboProductList = ({
   handleDeleteSaleProduct = () => {},
   openAddForm = () => {},
   loading = false,
-}) => (
-  <Card>
+}) => {
+  // Hàm kiểm tra trước khi xóa
+  const handleAskDelete = async (product) => {
+    const { canDelete, invoiceCount } = await validateDeleteSaleProduct(product._id || product.id);
+    if (!canDelete) {
+      let msg = 'Không thể xóa combo này.';
+      if (invoiceCount > 0) {
+        msg = `Không thể xóa vì combo này đã được sử dụng trong ${invoiceCount} hóa đơn.`;
+      } else if (invoiceCount === -1) {
+        msg = 'Không thể kiểm tra hóa đơn. Vui lòng thử lại.';
+      }
+      toast.error(msg, { position: 'bottom-right', duration: 3500 });
+      return;
+    }
+    handleDeleteSaleProduct(product);
+  };
+  return (
+    <Card>
     <CardHeader>
       <div className="flex items-center justify-between">
         <div>
@@ -77,7 +95,7 @@ const ComboProductList = ({
                         <Edit2 size={16} className="mr-2" /> Sửa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteSaleProduct(product)} variant="destructive">
+                      <DropdownMenuItem onClick={() => handleAskDelete(product)} variant="destructive">
                         <Trash2 size={16} className="mr-2" /> Xóa
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -90,6 +108,7 @@ const ComboProductList = ({
       )}
     </CardContent>
   </Card>
-);
+  );
+}
 
 export default ComboProductList;

@@ -13,7 +13,9 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
-const RetailProductList = ({
+import { validateDeleteSaleProduct } from '@/utils/saleProductValidate';
+import { toast } from 'sonner';
+function RetailProductList({
   products = [],
   getProductNames = () => '',
   getProductTags = () => [],
@@ -22,7 +24,24 @@ const RetailProductList = ({
   handleDeleteSaleProduct = () => {},
   openAddForm = () => {},
   loading = false,
-}) => (
+}) {
+  // Hàm kiểm tra trước khi xóa
+  const handleAskDelete = async (product) => {
+    const { canDelete, invoiceCount } = await validateDeleteSaleProduct(product._id || product.id);
+    if (!canDelete) {
+      let msg = 'Không thể xóa sản phẩm bán này.';
+      if (invoiceCount > 0) {
+        msg = `Không thể xóa vì sản phẩm này đã được sử dụng trong ${invoiceCount} hóa đơn.`;
+      } else if (invoiceCount === -1) {
+        msg = 'Không thể kiểm tra hóa đơn. Vui lòng thử lại.';
+      }
+      toast.error(msg, { position: 'bottom-right', duration: 3500 });
+      return;
+    }
+    handleDeleteSaleProduct(product);
+  };
+
+  return (
   <Card>
     <CardHeader>
       <div className="flex items-center justify-between">
@@ -75,7 +94,7 @@ const RetailProductList = ({
                         <Edit2 size={16} className="mr-2" /> Sửa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteSaleProduct(product)} variant="destructive">
+                      <DropdownMenuItem onClick={() => handleAskDelete(product)} variant="destructive">
                         <Trash2 size={16} className="mr-2" /> Xóa
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -88,6 +107,8 @@ const RetailProductList = ({
       )}
     </CardContent>
   </Card>
-);
+
+  );
+}
 
 export default RetailProductList;

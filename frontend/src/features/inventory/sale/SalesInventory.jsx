@@ -7,6 +7,7 @@ import SaleProductForm from './SaleProductForm'
 import SaleProductTable from './SaleProductTable';
 import RetailProductList from './RetailProductList';
 import ComboProductList from './ComboProductList';
+import DeleteDialog from '@/components/DeleteDialog';
 
 const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) => {
   const [allTags, setAllTags] = useState([])
@@ -22,6 +23,9 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
   // Pagination state
   const [page, setPage] = useState(1);
   const pageSize = 10;
+
+  // State cho dialog xác nhận xóa sale product (bán lẻ/combo)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, product: null });
 
   useEffect(() => {
     fetchData()
@@ -103,11 +107,9 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
     onInventoryChanged()
   }
 
+  // Hàm gọi API xóa sale product (bán lẻ/combo)
   const handleDeleteSaleProduct = async (product) => {
-    if (!confirm('Bạn chắc chắn muốn xóa sản phẩm bán này?')) return
-
     const productId = product._id || product.id
-
     try {
       await api.delete(`/sale-products/${productId}`)
       setSaleProducts(prev => prev.filter(p => (p._id || p.id) !== productId))
@@ -117,6 +119,11 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
       console.error('Lỗi khi xóa:', error)
       toast.error('Lỗi khi xóa sản phẩm')
     }
+  }
+
+  // Hàm mở dialog xác nhận xóa
+  const askDeleteSaleProduct = (product) => {
+    setDeleteDialog({ open: true, product });
   }
 
   const handleEditProduct = (product) => {
@@ -187,7 +194,7 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
                 getProductTags={getProductTags}
                 formatCurrency={formatCurrency}
                 handleEditProduct={handleEditProduct}
-                handleDeleteSaleProduct={handleDeleteSaleProduct}
+                handleDeleteSaleProduct={askDeleteSaleProduct}
                 openAddForm={openAddForm}
                 loading={isLoading}
               />
@@ -199,10 +206,21 @@ const SalesInventory = ({ onInventoryChanged = () => {}, reloadInventory = 0 }) 
                   getProductTags={getProductTags}
                   formatCurrency={formatCurrency}
                   handleEditProduct={handleEditProduct}
-                  handleDeleteSaleProduct={handleDeleteSaleProduct}
+                  handleDeleteSaleProduct={askDeleteSaleProduct}
                   openAddForm={openAddForm}
                   loading={isLoading}
                 />
+                  {/* Dialog xác nhận xóa sale product (bán lẻ/combo) */}
+                  <DeleteDialog
+                    open={deleteDialog.open}
+                    onOpenChange={open => setDeleteDialog({ open, product: open ? deleteDialog.product : null })}
+                    onConfirm={() => {
+                      if (deleteDialog.product) handleDeleteSaleProduct(deleteDialog.product);
+                      setDeleteDialog({ open: false, product: null });
+                    }}
+                    title="Xóa sản phẩm bán này?"
+                    description="Bạn có chắc chắn muốn xóa sản phẩm bán này không? Thao tác này không thể hoàn tác."
+                  />
             </div>
           </div>
         </>
